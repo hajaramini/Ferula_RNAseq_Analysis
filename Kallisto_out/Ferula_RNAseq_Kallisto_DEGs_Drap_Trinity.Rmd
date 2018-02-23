@@ -8,9 +8,10 @@ output:
 #After mapping reads in to kallisto, we want to find DEG for Plant6_Filtered 
 #import data
 #in this script we use Drap_Trinity data and also consider facility as a batch effect, after while we realize it is not correct. I just keep this script to see the steps.
+#first check the getwd(), I have changed the repository but not renamed in the following script
 
 ```{r}
-counts_All <- read.csv("~/Ferula_RNAseq_Rbased/Kallisto_out/combined_Plant6_counts_kallisto.csv", header=T , row.names = "target_id")
+counts_All <- read.csv("~/Ferula_RNAseq_Analysis/Kallisto_out/combined_Plant6_counts_kallisto.csv", header=T , row.names = "target_id")
 head(counts_All) #for pooling two library of BR3 (they are not replication)
 counts_All$BR3.2 <- counts_All$BR3 + counts_All$BR3.1
 counts_All$BR3 <- NULL

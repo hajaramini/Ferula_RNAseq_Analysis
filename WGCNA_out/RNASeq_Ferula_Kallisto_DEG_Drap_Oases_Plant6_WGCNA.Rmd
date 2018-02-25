@@ -8,7 +8,8 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-#This script is all function that I have run for Gene Networking. Present the result in GM but then noticed is not correct for my dataset.
+#This script is all function that I have run for Gene Networking. Present the result in GM but then noticed is not correct for my dataset.I used DEgenes for this scripts, it is not correct based on the https://labs.genetics.ucla.edu/horvath/CoexpressionNetwork/Rpackages/WGCNA/faq.html
+
 
 #first start with DEgenes of Drap_Oases_Plant6
 

@@ -9,7 +9,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-#After mapping reads in to kallisto, we want to find DEG for Drap_Oases_Plant6.fasta, this fasta are from adding transcripts which are not available in drap assembly result in to drap assembly  
+#After mapping reads in to kallisto, we want to find DEGs for Drap_Oases_Plant6.fasta, this fasta are from adding transcripts which are not available in drap assembly result in to drap assembly  
 #consider facility as a batch effect which not true. Just keep the scrips to see the steps
 #import data
 

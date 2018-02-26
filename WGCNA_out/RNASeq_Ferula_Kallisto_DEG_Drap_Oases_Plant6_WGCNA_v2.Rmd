@@ -6,6 +6,7 @@ output:
 ---
 
 #Goal of this script is to build networks for Ferula assafoetida RNAseq data using WGCNA, will all the data together as a big net, then check the expression pattern of modules across different libraries.
+#run WGCNA for all genes count NOT DE genes
 #Then notice the expression is not consistent among different facilities we decide to run net just for Davis facility. 
 
 ```{r setup, include=FALSE}
@@ -24,14 +25,14 @@ library(sva)
 options(stringsAsFactors = FALSE)
 ```
 
-#run WGCNA for all genes count NOT DE genes
+
 #import input from Kallisto_out folder
 
 ```{r}
 # Filter out feature if there are less than 10 reads in more than 90% of samples (WGCNA suggestion)
 #counts_Davis_WGCNA <- counts_All[rowSums(counts_All > 10) >= 3,] 
 #dim(counts_Davis_WGCNA) #36673 18
-#write.csv(counts_Davis_WGCNA,file="~/Ferula_RNAseq_Rbased/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_counts_WGCNA_kalliso.csv")
+#write.csv(counts_Davis_WGCNA,file="~/Ferula_RNAseq_Analysis/WGCNA_out/Ferula_RNAseq_combined_drap_oases_plant6_counts_WGCNA_kalliso.csv")
 counts_WGCNA <- read.csv("~/Ferula_RNAseq_Analysis/WGCNA_out/Ferula_RNAseq_combined_drap_oases_plant6_counts_WGCNA_kalliso.csv", header = T , row.names=1)
 dim(counts_WGCNA) # 36673 18
 ```

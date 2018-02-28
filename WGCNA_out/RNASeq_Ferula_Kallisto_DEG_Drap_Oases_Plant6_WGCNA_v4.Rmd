@@ -434,6 +434,7 @@ save(datTraitsCoumarin,datTraitsCoumarin.mod,datTraitsTerpen,datTraitsTerpen.mod
 ```
 
 #Relating modules and module eigengenes to external data
+#https://labs.genetics.ucla.edu/horvath/CoexpressionNetwork/Rpackages/WGCNA/Tutorials/Simulated-06-RelatingToExt.pdf
 
 ```{r}
 #To get a sense of how related the modules are one can summarize each module by its eigengene (first principal component).
@@ -472,20 +473,45 @@ write.table(p.values_HM, file = "~/Ferula_RNAseq_Rbased/WGCNA_out/p.values_HM.cs
 #One can also define a measure of module significance as the average gene significance of all genes in the module. We use the absolute value for defining a correlation based gene significance measure.
 
 ```{r}
+#UMF
 GS1_UMF=as.numeric(cor(datTraits$UMF,datExpr0tissues_order, use="p"))
 GeneSignificance_UMF=abs(GS1_UMF)
 # Next module significance is defined as average gene significance.
 ModuleSignificance_UMF=tapply(GeneSignificance_UMF, moduleColors, mean, na.rm=T)
+#Luteolin
 GS1_Luteolin=as.numeric(cor(datTraits$Luteolin,datExpr0tissues_order, use="p"))
 GeneSignificance_Luteolin=abs(GS1_Luteolin)
 ModuleSignificance_Luteolin=tapply(GeneSignificance_Luteolin, moduleColors, mean, na.rm=T)
+#HM
+GS1_HM=as.numeric(cor(datTraits$HM,datExpr0tissues_order, use="p"))
+GeneSignificance_HM=abs(GS1_HM)
+ModuleSignificance_HM=tapply(GeneSignificance_HM, moduleColors, mean, na.rm=T)
+#HS
+GS1_HS=as.numeric(cor(datTraits$HS,datExpr0tissues_order, use="p"))
+GeneSignificance_HS=abs(GS1_HS)
+ModuleSignificance_HS=tapply(GeneSignificance_HS, moduleColors, mean, na.rm=T)
+#OS
+GS1_OS=as.numeric(cor(datTraits$OS,datExpr0tissues_order, use="p"))
+GeneSignificance_OS=abs(GS1_OS)
+ModuleSignificance_OS=tapply(GeneSignificance_OS, moduleColors, mean, na.rm=T)
+#VSC
+GS1_VSC=as.numeric(cor(datTraits$VSC,datExpr0tissues_order, use="p"))
+GeneSignificance_VSC=abs(GS1_VSC)
+ModuleSignificance_VSC=tapply(GeneSignificance_VSC, moduleColors, mean, na.rm=T)
+
+
+
 #The advantage of this second approach is that it can be used for any gene significance measure. A gene significance measure could be defined without reference to a sample trait. For example, it could indicate pathway membership (1 or 0) or gene essentiality (1 or 0), etc
 
-sizeGrWindow(8,7)
-pdf(file = "~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/SampleClustering.pdf", width = 8, height = 7);
-par(mfrow = c(2,1))
+sizeGrWindow(8,10)
+pdf(file = "~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/GeneSignificanceTraits_v2.pdf", width = 8, height = 10);
+#par(mfrow = c(6,1))
 plotModuleSignificance(GeneSignificance_UMF,moduleColors)
 plotModuleSignificance(GeneSignificance_Luteolin,moduleColors)
+plotModuleSignificance(GeneSignificance_HM,moduleColors)
+plotModuleSignificance(GeneSignificance_HS,moduleColors)
+plotModuleSignificance(GeneSignificance_OS,moduleColors)
+plotModuleSignificance(GeneSignificance_VSC,moduleColors)
 dev.off()
 #Figure: Barplot of module significance defined as the mean gene significance across all genes in the module. The ... and ... modules are the most promising.
 ```

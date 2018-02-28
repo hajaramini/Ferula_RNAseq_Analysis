@@ -271,7 +271,7 @@ moduleColors = mergedColors
 colorOrder = c("grey", standardColors(50));
 moduleLabels = match(moduleColors, colorOrder)-1; #45 modules after merging use this for number of each genes's modules
 MEs = mergedMEs
-save(MEs,moduleColors, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Rbased/WGCNA_out/MEs_all_tissues_Davis.Rdata")
+save(MEs,moduleColors, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEs_all_tissues_Davis.Rdata")
 ```
 #Next we calculate the principle components for visualizations(Julin's suggestion), see the mean of expression of flower, stem, root and leaf in tissue modules 
 
@@ -279,7 +279,7 @@ save(MEs,moduleColors, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volume
 dim(MEs) #12 45 
 MEs_order <- MEs[c("8","4","12","9","5","1","10","6","2","11","7","3"),]
 samples_order <- c("DR2", "DR3" , "DR6", "DS2","DS3","DS6","DF2","DF3","DF6","DL2","DL3","DL6")
-save(MEs_order, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Rbased/WGCNA_out/MEs_order_all_tissues_Davis.Rdata")
+save(MEs_order, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEs_order_all_tissues_Davis.Rdata")
 colors = names(table(moduleColors))
 ordergenes = geneTree$order
 pdf("~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/ModuleEigengeneVisualization.pdf",height=6,width=6)
@@ -328,7 +328,7 @@ summary(meanExpressionByArray)
 #0.6556  1.2670  1.5456  1.4933  1.7875  2.0159
 datExpr0tissues.largeSD<-datExpr0tissues[,variancedatExpr>0.5] # no idea to pick cut off for sd
 #we decided to keep all genes NOT just largeSD
-save(datExpr0tissues.largeSD, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Rbased/WGCNA_out/datExpr0tissues.largeSD.Rdata")
+save(datExpr0tissues.largeSD, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/datExpr0tissues.largeSD.Rdata")
 ```
 #see the classification of samples (same as we have done before)
 
@@ -361,7 +361,7 @@ table(FilterGenes.turquoise)
 #NOW important to know Which genes were filtered in?
 MEturquoise.small <- dimnames(data.frame(datExpr0tissues))[[2]][FilterGenes.turquoise]
 head(MEturquoise.small)
-save(MEturquoise.small,file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Rbased/WGCNA_out/MEturquoise_for_GO.csv", row.names =F, col.names = F, quote = F)
+save(MEturquoise.small,file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEturquoise_for_GO.csv", row.names =F, col.names = F, quote = F)
 ```
 
 #relate modules to trait and identify important genes, 
@@ -372,7 +372,7 @@ save(MEturquoise.small,file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volume
 ```{r}
 samples_order <- c("DR2", "DR3" , "DR6", "DS2","DS3","DS6","DF2","DF3","DF6","DL2","DL3","DL6")
 datExpr0tissues_order <- datExpr0tissues[c("DR2", "DR3" , "DR6", "DS2","DS3","DS6","DF2","DF3","DF6","DL2","DL3","DL6"),]
-save(datExpr0tissues_order, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Rbased/WGCNA_out/datExpr0tissues_order.Rdata")
+save(datExpr0tissues_order, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/datExpr0tissues_order.Rdata")
 
 #Loading trait data I have to prepare dataset for matabolites
 traitData = read.csv("~/Ferula_RNAseq_Rbased/WGCNA_out/Metabolite_Traits.csv"); #just Davis libraries
@@ -383,7 +383,7 @@ traitDataTerpen <-traitData[ ,c(1, 5:8)]
 names(traitDataCoumarin)
 names(traitDataTerpen) 
 #save
-save(traitData,traitDataCoumarin,traitDataTerpen, file = "~/Ferula_RNAseq_Rbased/WGCNA_out/Metabolite_Traits.RData")
+save(traitData,traitDataCoumarin,traitDataTerpen, file = "~/Ferula_RNAseq_Analysis/WGCNA_out/Metabolite_Traits.RData")
 ```
 # Form a data frame analogous to expression data that will hold the metabolite traits just for Coumarin.
 #for all tissues
@@ -466,7 +466,7 @@ p.values_OS = corPvalueStudent(cor(datTraits$OS,datME, use="p"), nSamples = leng
 p.values_VSC = corPvalueStudent(cor(datTraits$VSC,datME, use="p"), nSamples = length(datTraits$VSC))
 
 #save
-write.table(p.values_HM, file = "~/Ferula_RNAseq_Rbased/WGCNA_out/p.values_HM.csv", row.names=FALSE, sep="\t")
+write.table(p.values_HM, file = "~/Ferula_RNAseq_Analysis/WGCNA_out/p.values_HM.csv", row.names=FALSE, sep="\t")
 ```
 
 #Second Measure of module significance as average gene significance

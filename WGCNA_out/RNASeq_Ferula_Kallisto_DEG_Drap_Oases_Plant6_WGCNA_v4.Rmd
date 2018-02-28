@@ -1,0 +1,491 @@
+---
+title: "RNASeq_Ferula_Kallisto_DEG_Drap_Oases_Plant6_WGCNA_v4"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Goal of this script is to build networks for Ferula assafoetida RNAseq data using WGCNA. Difference between this version and v3 is that in this script is run just in DAVIS facility. Just removing genes with low count reads 
+#This is the last version for Networking
+
+```{r}
+library(WGCNA) 
+library(tidyverse) 
+library(edgeR)
+library(DESeq2)
+library(magrittr) 
+library(gplots)
+library(reshape2)
+library(sva) 
+options(stringsAsFactors = FALSE) # have to run that
+```
+
+```{r}
+counts_WGCNA <- read.csv("~/Ferula_RNAseq_Analysis/WGCNA_out/Ferula_RNAseq_combined_drap_oases_plant6_counts_WGCNA_kalliso.csv", header = T , row.names=1)
+dim(counts_WGCNA) # 36673 18
+colnames(counts_WGCNA)
+counts_Davis <- counts_WGCNA[,c(1,2,3,4,5,6,7,8,9,10,11,12)]
+dim(counts_Davis) #36673  12
+leaf <- counts_Davis[,c(3, 7, 11)]
+stem <- counts_Davis[,c(1, 5, 9)]
+root <- counts_Davis[,c(4, 8, 12)]
+flower <- counts_Davis[,c(2, 6, 10)]
+tissuesvoom = t(voom(counts_Davis)$E) #all four tissues together
+leafvoom = t(voom(leaf)$E)
+stemvoom = t(voom(stem)$E)
+rootvoom = t(voom(root)$E)
+flowervoom = t(voom(flower)$E)
+```
+
+```{r}
+datExpr0tissues = as.data.frame((tissuesvoom))
+rownames(datExpr0tissues) #12
+nGenes <- ncol(datExpr0tissues)
+nGenes #36673
+datExpr0root = as.data.frame((rootvoom));
+rownames(datExpr0root) #number of the samples
+nSamples <- nrow(datExpr0root) #3
+nGenes <- ncol(datExpr0root) #36673
+nSamples
+gsg = goodSamplesGenes(datExpr0root)
+#Error in goodGenes(datExpr, goodSamples, goodGenes, minFraction = minFraction,Too few genes with valid expression levels in the required number of samples. So I could not use each tissue dataset for constructing network
+gsg = goodSamplesGenes(datExpr0tissues)
+gsg$allOK
+#[1] TRUE
+datExpr0leaf = as.data.frame((leafvoom))
+nSamples <- nrow(datExpr0leaf) #3
+datExpr0stem = as.data.frame((stemvoom))
+nSamples <- nrow(datExpr0stem) #3
+nSamples
+datExpr0flower = as.data.frame((flowervoom))
+nSamples <- nrow(datExpr0flower) #3
+nSamples
+save(datExpr0tissues, datExpr0flower, datExpr0leaf, datExpr0root, datExpr0stem,tissuesvoom, leafvoom, stemvoom, rootvoom, flowervoom, file = "~/Ferula_RNAseq_Analysis/WGCNA_out/dataInput_v4.RData")
+```
+
+```{r}
+nSets = 5
+setLabels = c("Leaf", "Stem", "Root", "Flower", "tissues")
+shortLabels = setLabels
+multiExpr = vector(mode = "list", length = nSets)
+multiExpr[[1]] = list(data = as.data.frame(leafvoom))
+names(multiExpr[[1]]$data) = colnames(leafvoom)
+rownames(multiExpr[[1]]$data) = rownames(leafvoom)
+nSamples <- nrow(multiExpr[[1]]$data) #3
+nGenes <- ncol(multiExpr[[1]]$data) #36673
+nSamples
+multiExpr[[2]] = list(data = as.data.frame(stemvoom))
+names(multiExpr[[2]]$data) = colnames(stemvoom)
+rownames(multiExpr[[2]]$data) = rownames(stemvoom)
+nSamples <- nrow(multiExpr[[2]]$data) #3
+nGenes <- ncol(multiExpr[[2]]$data) #36673
+multiExpr[[3]] = list(data = as.data.frame(rootvoom))
+names(multiExpr[[3]]$data) = colnames(rootvoom)
+rownames(multiExpr[[3]]$data) = rownames(rootvoom)
+nSamples <- nrow(multiExpr[[3]]$data) #3
+nGenes <- ncol(multiExpr[[3]]$data) #36673
+multiExpr[[4]] = list(data = as.data.frame(flowervoom))
+names(multiExpr[[4]]$data) = colnames(flowervoom)
+rownames(multiExpr[[4]]$data) = rownames(flowervoom)
+nSamples <- nrow(multiExpr[[4]]$data) #3
+nGenes <- ncol(multiExpr[[4]]$data) #36673
+multiExpr[[5]] = list(data = as.data.frame(tissuesvoom))
+names(multiExpr[[5]]$data) = colnames(tissuesvoom)
+rownames(multiExpr[[5]]$data) = rownames(tissuesvoom)
+nSamples <- nrow(multiExpr[[5]]$data) #12
+nGenes <- ncol(multiExpr[[5]]$data) #36673
+nSamples
+exprSize = checkSets(multiExpr)
+exprSize
+```
+
+```{r}
+nSets <- 5
+sampleTrees = list()
+for (set in 1:nSets) {
+sampleTrees[[set]] = hclust(dist(multiExpr[[set]]$data), method = "average")
+}
+pdf(file = "~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/SampleClustering.pdf", width = 12, height = 12);
+par(mfrow=c(2,1))
+par(mar = c(0, 4, 2, 0))
+for (set in 1:nSets)
+plot(sampleTrees[[set]], main = paste("Sample clustering on all genes in", setLabels[set]),
+xlab="", sub="", cex = 0.7);
+dev.off();
+```
+# Choose a set of soft-thresholding powers
+
+```{r}
+powers = c(seq(4,10,by=1), seq(12,20, by=2))
+
+# Initialize a list to hold the results of scale-free analysis
+powerTables = vector(mode = "list", length = nSets)
+
+# Call the network topology analysis function for each set in turn
+#The aim of pickSoftThreshold function is to help the user pick an appropriate soft-thresholding power for network construction
+for (set in 1:nSets)
+powerTables[[set]] = list(data = pickSoftThreshold(multiExpr[[set]]$data, powerVector=powers, verbose = 2)[[2]])
+collectGarbage()
+
+# Plot the results:
+colors = c("yellow", "red", "blue", "green","black")
+
+# Will plot these columns of the returned scale free analysis tables
+plotCols = c(2,5,6,7)
+colNames = c("Scale Free Topology Model Fit", "Mean connectivity", "Median connectivity",
+"Max connectivity")
+
+# Get the minima and maxima of the plotted points
+ylim = matrix(NA, nrow = 2, ncol = 4);
+for (set in 1:nSets) {
+  for (col in 1:length(plotCols)) {
+    ylim[1, col] = min(ylim[1, col], powerTables[[set]]$data[, plotCols[col]], na.rm = TRUE);
+    ylim[2, col] = max(ylim[2, col], powerTables[[set]]$data[, plotCols[col]], na.rm = TRUE);
+  }
+}
+```
+
+# Call the network topology analysis function for each set in turn
+#The aim of pickSoftThreshold function is to help the user pick an appropriate soft-thresholding power for network construction
+
+```{r}
+sizeGrWindow(8, 6)
+pdf(file = "~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/scaleFreeAnalysis.pdf", wi = 8, he = 6)
+par(mfcol = c(2,2));
+par(mar = c(4.2, 4.2 , 2.2, 0.5))
+cex1 = 0.7;
+for (col in 1:length(plotCols)) for (set in 1:nSets) {
+if (set==1) {
+plot(powerTables[[set]]$data[,1], -sign(powerTables[[set]]$data[,3])*powerTables[[set]]$data[,2],
+xlab="Soft Threshold (power)",ylab=colNames[col],type="n", ylim = ylim[, col],
+main = colNames[col]);
+addGrid();
+}
+if (col==1) {
+text(powerTables[[set]]$data[,1], -sign(powerTables[[set]]$data[,3])*powerTables[[set]]$data[,2],
+labels=powers,cex=cex1,col=colors[set]);
+} else
+text(powerTables[[set]]$data[,1], powerTables[[set]]$data[,plotCols[col]],
+labels=powers,cex=cex1,col=colors[set]);
+if (col==1) {
+legend("bottomright", legend = setLabels, col = colors, pch = 20) ;
+} else
+legend("topright", legend = setLabels, col = colors, pch = 20) ;
+}
+dev.off();
+```
+#we will calculate all of the necessary values to run WGCNA
+#choose 9
+
+```{r}
+softPower = 9
+datExpr0tissues
+adjacency = adjacency(datExpr0tissues,power=softPower,type="signed"); #picked signed based on the WGCNA suggestion. prefer signed vs unsigned
+dim(adjacency) #36673 36673
+diag(adjacency)=0
+dissTOM   = 1-TOMsimilarity(adjacency, TOMType="signed")
+dim(dissTOM) #36673 36673
+save(adjacency, file = "adjacency.Davis.RData")
+save(dissTOM, file = "dissTOM.Davis.Rdata")
+```
+
+
+```{r}
+#all tissues
+install.packages("flashClust")
+library(flashClust)
+#load("dissTOM.Davis.Rdata")
+geneTree  = flashClust(as.dist(dissTOM), method="average")
+save(geneTree, file = "geneTree.Rdata")
+# display the networks visually
+sizeGrWindow(6,16)
+pdf("~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/dendrogram.pdf",height=6,width=16)
+plot(geneTree,xlab="",sub="",main="Gene clustering on TOM-based dissimilarity", labels=FALSE,hang=0.04);
+dev.off()  #These are "good" data, since there are a lot of distinct branches
+
+#define modules, we will determine modules based on total data after removing batch effect
+# We like large modules, so we set the minimum module size relatively high:
+minModuleSize <- 30;
+# Module identification using dynamic tree cut:
+dynamicMods <- cutreeDynamic(dendro = geneTree, distM = dissTOM,
+                             deepSplit <- 2, pamRespectsDendro = FALSE,
+                            minClusterSize = minModuleSize);
+
+table(dynamicMods)
+table(dynamicMods) %>% length() # 55 modules 
+save(dynamicMods, file = "dynamicMods.Rdata")
+# Convert numeric lables into colors
+dynamicColors = labels2colors(dynamicMods) 
+table(dynamicColors)
+# Plot the dendrogram and colors CRderneath
+sizeGrWindow(8,6)
+pdf("Plot_v4/Final_modules.pdf",height=8,width=12)
+plotDendroAndColors(geneTree, dynamicColors, "Dynamic Tree Cut",
+                    dendroLabels = FALSE, hang = 0.03,
+                    addGuide = TRUE, guideHang = 0.05,
+                    main = "Gene dendrogram and module colors")
+dev.off()
+```
+
+# merge similar modules
+
+```{r}
+#all tissues
+# Calculate eigengenes
+#load("dataInput_v4.RData")
+MEList <- moduleEigengenes(datExpr0tissues, colors = dynamicColors) # Calculates module eigengenes (1st principal component) of modules in a given single dataset. 
+MEs <- MEList$eigengenes
+# Calculate dissimilarity of module eigengenes
+MEDiss <- 1-cor(MEs);
+# Cluster module eigengenes
+METree <- hclust(as.dist(MEDiss), method = "average");
+# Plot the result
+sizeGrWindow(7, 6)
+plot(METree, main = "Clustering of module eigengenes",
+     xlab = "", sub = "")
+# merge with correlation > 0.8
+MEDissThres = 0.2
+# Plot the cut line into the dendrogram
+plot(METree, main = "Clustering of module eigengenes",
+     xlab = "", sub = "")
+abline(h=MEDissThres, col = "red")
+# Call an automatic merging 
+merge = mergeCloseModules(datExpr0tissues, dynamicColors, cutHeight = MEDissThres, verbose = 3) #Calculating 45 module eigengenes in given set
+# The merged module colors
+mergedColors = merge$colors
+# Eigengenes of the new merged modules:
+mergedMEs = merge$newMEs 
+# compare pre and post merge
+sizeGrWindow(12, 9)
+pdf(file = "Plot_v4/geneDendro.pdf", wi = 9, he = 6)
+plotDendroAndColors(geneTree, cbind(dynamicColors, mergedColors),
+c("Dynamic Tree Cut", "Merged dynamic"),
+dendroLabels = FALSE, hang = 0.03,
+addGuide = TRUE, guideHang = 0.05)
+dev.off() 
+# Rename to moduleColors
+moduleColors = mergedColors
+# Construct numerical labels corresponding to the colors
+colorOrder = c("grey", standardColors(50));
+moduleLabels = match(moduleColors, colorOrder)-1; #45 modules after merging use this for number of each genes's modules
+MEs = mergedMEs
+save(MEs,moduleColors, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Rbased/WGCNA_out/MEs_all_tissues_Davis.Rdata")
+```
+#Next we calculate the principle components for visualizations(Julin's suggestion), see the mean of expression of flower, stem, root and leaf in tissue modules 
+
+```{r}
+dim(MEs) #12 45 
+MEs_order <- MEs[c("8","4","12","9","5","1","10","6","2","11","7","3"),]
+samples_order <- c("DR2", "DR3" , "DR6", "DS2","DS3","DS6","DF2","DF3","DF6","DL2","DL3","DL6")
+save(MEs_order, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Rbased/WGCNA_out/MEs_order_all_tissues_Davis.Rdata")
+colors = names(table(moduleColors))
+ordergenes = geneTree$order
+pdf("~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/ModuleEigengeneVisualization.pdf",height=6,width=6)
+
+par(mfrow=c(1,1), mar=c(6, 5, 2, 2) + 0.1, cex=1)
+
+for (which.module in names(table(moduleColors))){
+  ME = MEs_order[, paste("ME",which.module, sep="")] 
+  barplot(ME, col=which.module, main="", cex.main=2, 
+      ylab="eigengene expression",xlab="array sample",
+      names.arg = samples_order, cex.names = 0.7)
+}; 
+dev.off()
+#the exp now is better, we can see the comsistant across tissues
+#the order of the color of the figure is besed on table(mergedColors)
+```
+
+#get genes with large stdv across 12 libraries
+
+```{r}
+meanExpressionByArray=apply( datExpr0tissues,1,mean, na.rm=T) #We start by determining the mean expression per array
+NumberMissingByArray=apply( is.na(data.frame(datExpr0tissues)),1, sum) # no missing data
+```
+
+#A simple way to examine the mean expression per array is to use
+
+```{r}
+sizeGrWindow(9, 5)
+pdf("Plot_v4/meanExpressionByArray.pdf",height=6,width=6)
+barplot(meanExpressionByArray,
+xlab = "Sample", ylab = "Mean expression",
+main ="Mean expression across samples",
+names.arg = c("DS6", "DF6", "DL6", "DR3", "DS3", "DF3", "DL3", "DR2" ,"DS2", "DF2", "DL2", "DR6"), cex.names = 0.7)
+```
+
+#calculate variance
+
+```{r}
+# Calculate the variances of the probes and the number of present entries
+variancedatExpr=as.vector(apply(as.matrix(datExpr0tissues),2,var, na.rm=T))
+summary(variancedatExpr)
+#Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+#0.08279  1.38195  2.29052  2.67872  3.50454 21.67623 
+summary(meanExpressionByArray)
+#Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+#0.6556  1.2670  1.5456  1.4933  1.7875  2.0159
+datExpr0tissues.largeSD<-datExpr0tissues[,variancedatExpr>0.5] # no idea to pick cut off for sd
+#we decided to keep all genes NOT just largeSD
+save(datExpr0tissues.largeSD, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Rbased/WGCNA_out/datExpr0tissues.largeSD.Rdata")
+```
+#see the classification of samples (same as we have done before)
+
+```{r}
+sizeGrWindow(9, 5)
+pdf("Plot_v4/ClusterTreeSamples.pdf",height=6,width=6)
+plotClusterTreeSamples(datExpr=datExpr0tissues)
+```
+
+#Intramodular connectivity, module membership, and screening for intramodular hub genes
+#we can do for each modules
+
+```{r}
+datME=moduleEigengenes(datExpr0tissues,moduleColors)$eigengenes  # same as a MEs, so in signedKME function use MEs instead of datME
+datKME=signedKME(datExpr0tissues, MEs, outputColumnName="MM.")
+datKME %>% dim() #36673  45
+# Display the first few rows of the data frame
+head(datKME)
+#run FilterGenes for each modules separetaly
+#FilterGenes= abs(GS1)> .2 & abs(datKME$MM.brown)>.8
+FilterGenes.palevioletred3 <- abs(datKME$MM.palevioletred3) >.8 #got FALSE & TRUE
+table(FilterGenes.palevioletred3)
+#FilterGenes.palevioletred3
+#FALSE  TRUE 
+#36250   423 
+FilterGenes.turquoise <- abs(datKME$MM.turquoise) >.8
+table(FilterGenes.turquoise)
+#FALSE  TRUE 
+#34189  2484
+#NOW important to know Which genes were filtered in?
+MEturquoise.small <- dimnames(data.frame(datExpr0tissues))[[2]][FilterGenes.turquoise]
+head(MEturquoise.small)
+save(MEturquoise.small,file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Rbased/WGCNA_out/MEturquoise_for_GO.csv", row.names =F, col.names = F, quote = F)
+```
+
+#relate modules to trait and identify important genes, 
+#gene relationship to trait and important modules: gene significance and module membership
+#Module membership (kME) and its use in comparing networks
+#**need trait file** 
+
+```{r}
+samples_order <- c("DR2", "DR3" , "DR6", "DS2","DS3","DS6","DF2","DF3","DF6","DL2","DL3","DL6")
+datExpr0tissues_order <- datExpr0tissues[c("DR2", "DR3" , "DR6", "DS2","DS3","DS6","DF2","DF3","DF6","DL2","DL3","DL6"),]
+save(datExpr0tissues_order, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Rbased/WGCNA_out/datExpr0tissues_order.Rdata")
+
+#Loading trait data I have to prepare dataset for matabolites
+traitData = read.csv("~/Ferula_RNAseq_Rbased/WGCNA_out/Metabolite_Traits.csv"); #just Davis libraries
+#seperate two files based on the unit of matabolite
+traitDataCoumarin <-traitData[ ,c(1:2,4)] #remove UMP because all of them is zero, I just convert to 0.1 but prefer to do mot consider UMP
+traitDataTerpen <-traitData[ ,c(1, 5:8)]
+# See how big the traits are and what are the trait and sample names
+names(traitDataCoumarin)
+names(traitDataTerpen) 
+#save
+save(traitData,traitDataCoumarin,traitDataTerpen, file = "~/Ferula_RNAseq_Rbased/WGCNA_out/Metabolite_Traits.RData")
+```
+# Form a data frame analogous to expression data that will hold the metabolite traits just for Coumarin.
+#for all tissues
+
+```{r}
+datTraitsCoumarin = traitDataCoumarin # we do not consider first 
+rownames(datTraitsCoumarin) <- datTraitsCoumarin
+rownames(datTraitsCoumarin) <- datTraitsCoumarin$Sample
+# Form a data frame analogous to expression data that will hold the metabolite traits just for Terpen.
+datTraitsTerpen = traitDataTerpen 
+rownames(datTraitsTerpen) <- datTraitsTerpen$Sample
+#for each tissue, separately
+```
+
+#We now have the expression data in the variable datExpr, and the corresponding clinical traits in the variable datTraits. Before we continue with network construction and module detection, we visualize how the clinical traits relate to the sample dendrogram.
+
+```{r}
+# Re-cluster samples
+sampleTree2 = hclust(dist(datExpr0tissues), method = "average")
+# Convert traits to a color representation: white means low, red means high, grey means missing entry
+datTraits.mod <- datTraits[,-1]
+datTraitsCoumarin.mod<- datTraitsCoumarin[,-1]
+datTraitsTerpen.mod<- datTraitsTerpen[,-1]
+traitColors = numbers2colors(datTraits.mod, signed = FALSE);
+traitColors <- traitColors[,-2] #remove UMP column, because it cuases all gray (0.1)
+traitColors_coumarin = numbers2colors(datTraitsCoumarin.mod, signed = FALSE)
+traitColors_terpen = numbers2colors(datTraitsTerpen.mod, signed = FALSE)
+# Plot the sample dendrogram and the colors underneath.
+sizeGrWindow(7,6);
+pdf(file = "Plot/SampleDendrogramTraitHeatmap.pdf", wi = 7, he = 6);
+par(mfrow=c(1,1));
+plotDendroAndColors(sampleTree2, traitColorsCoumarin, groupLabels = names(datTraitsCoumarin), main = "Sample dendrogram and trait heatmap")
+```
+
+# Plot the sample dendrogram and the colors underneath.
+
+```{r}
+sizeGrWindow(7,6);
+pdf(file = "~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/SampleDendrogramTraitCoumarinHeatmap.pdf", wi = 7, he = 6);
+par(mfrow=c(1,2));
+plotDendroAndColors(sampleTree2, traitColors_coumarin, groupLabels = names(datTraitsCoumarin.mod), main = "Sample dendrogram and trait heatmap")
+# Plot the sample dendrogram and the colors underneath.
+plotDendroAndColors(sampleTree2, traitColors_terpen, groupLabels = names(datTraitsTerpen.mod), main = "Sample dendrogram and trait heatmap")
+dev.off()
+
+#In the plot,white means a low value, red a high value, and grey a missing entry.The last step is to save the relevant expression and trait data for use in the next steps of the tutorial.
+save(datTraitsCoumarin,datTraitsCoumarin.mod,datTraitsTerpen,datTraitsTerpen.mod, file = "datTraits.RData")
+```
+
+#Relating modules and module eigengenes to external data
+
+```{r}
+#To get a sense of how related the modules are one can summarize each module by its eigengene (first principal component).
+datME=moduleEigengenes(datExpr0tissues_order,colors = moduleColors)$eigengenes #equal to MEs_order
+signif(cor(datME, use="p"), 2)
+#We define a dissimilarity measure between the module eigengenes that keeps track of the sign of the correlation between the module eigengenes, and use it to cluster the eigengene:
+dissimME=(1-t(cor(datME, method="p")))/2
+hclustdatME=hclust(as.dist(dissimME), method="average" )
+# Plot the eigengene dendrogram
+par(mfrow=c(1,1))
+plot(hclustdatME, main="Clustering tree based of the module eigengenes")
+```
+
+#Finding modules that relate to a clinical trait
+#There are two approaches one can follow. We discuss each below.
+#First Correlate the module eigengenes with the trait
+ 
+```{r}
+signif(cor(datTraits$UMF,datME, use="p"),2)
+#it is possible to do for each trait and each module which looked most interesting. An advantage of this approach is that it allows ut to compute p-values using
+cor.test(datTraits$UMF, datME$MEbrown)
+
+#The following code can be used to get all p-values:
+p.values_UMF = corPvalueStudent(cor(datTraits$UMF,datME, use="p"), nSamples = length(datTraits$UMF))
+p.values_Luteolin = corPvalueStudent(cor(datTraits$Luteolin,datME, use="p"), nSamples = length(datTraits$Luteolin))
+p.values_HM = corPvalueStudent(cor(datTraits$HM,datME, use="p"), nSamples = length(datTraits$HM))
+p.values_HS = corPvalueStudent(cor(datTraits$HS,datME, use="p"), nSamples = length(datTraits$HS))
+p.values_OS = corPvalueStudent(cor(datTraits$OS,datME, use="p"), nSamples = length(datTraits$OS))
+p.values_VSC = corPvalueStudent(cor(datTraits$VSC,datME, use="p"), nSamples = length(datTraits$VSC))
+
+#save
+write.table(p.values_HM, file = "~/Ferula_RNAseq_Rbased/WGCNA_out/p.values_HM.csv", row.names=FALSE, sep="\t")
+```
+
+#Second Measure of module significance as average gene significance
+#One can also define a measure of module significance as the average gene significance of all genes in the module. We use the absolute value for defining a correlation based gene significance measure.
+
+```{r}
+GS1_UMF=as.numeric(cor(datTraits$UMF,datExpr0tissues_order, use="p"))
+GeneSignificance_UMF=abs(GS1_UMF)
+# Next module significance is defined as average gene significance.
+ModuleSignificance_UMF=tapply(GeneSignificance_UMF, moduleColors, mean, na.rm=T)
+GS1_Luteolin=as.numeric(cor(datTraits$Luteolin,datExpr0tissues_order, use="p"))
+GeneSignificance_Luteolin=abs(GS1_Luteolin)
+ModuleSignificance_Luteolin=tapply(GeneSignificance_Luteolin, moduleColors, mean, na.rm=T)
+#The advantage of this second approach is that it can be used for any gene significance measure. A gene significance measure could be defined without reference to a sample trait. For example, it could indicate pathway membership (1 or 0) or gene essentiality (1 or 0), etc
+
+sizeGrWindow(8,7)
+pdf(file = "~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/SampleClustering.pdf", width = 8, height = 7);
+par(mfrow = c(2,1))
+plotModuleSignificance(GeneSignificance_UMF,moduleColors)
+plotModuleSignificance(GeneSignificance_Luteolin,moduleColors)
+dev.off()
+#Figure: Barplot of module significance defined as the mean gene significance across all genes in the module. The ... and ... modules are the most promising.
+```

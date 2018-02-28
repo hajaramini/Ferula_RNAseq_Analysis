@@ -16,7 +16,7 @@ knitr::opts_chunk$set(echo = TRUE)
 #import data
 
 ```{r}
-counts_All <- read.csv("~/Ferula_RNAseq_Analysis/Kallisto_out/combined_drap_oases_plant6_counts_kallisto.csv", header=T, row.names = "target_id")
+counts_All <- read.csv("~/Ferula_RNAseq_Rbased/Kallisto_out/combined_drap_oases_plant6_counts_kallisto.csv", header=T, row.names = "target_id")
 head(counts_All) #for pooling two library of BR3 (they are not replication)
 counts_All$BR3.2 <- counts_All$BR3 + counts_All$BR3.1
 counts_All$BR3 <- NULL
@@ -33,7 +33,7 @@ write.csv(counts_All, file="~/Ferula_RNAseq_Rbased/Kallisto_out/Ferula_RNAseq_co
 counts_Davis <- counts_All[,c("DS6", "DF6","DL6","DR3", "DS3", "DF3" ,"DL3", "DR2", "DS2" ,"DF2" ,"DL2", "DR6")]
 colnames(counts_Davis) <- c("S6", "F6","L6","R3", "S3", "F3" ,"L3", "R2", "S2" ,"F2" ,"L2", "R6")
 dim(counts_Davis) #60134 12
-write.csv(counts_Davis, file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_Davis_counts_kallisto.csv")
+write.csv(counts_Davis, file="~/Ferula_RNAseq_Rbased/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_Davis_counts_kallisto.csv")
 ```
 
 #filter based on read count, assign group, normalize, design matrix
@@ -59,12 +59,12 @@ counts_Davis[is.na(counts_Davis)]<-0
 counts_Davis_small <-counts_Davis[rowSums(counts_Davis > 10) >= 3,] 
 dim(counts_Davis_small) #22995  12
 dim(counts_Davis) #60134 12
-write.csv(counts_Davis_small,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_counts_Davis_small_kalliso.csv") # use this for downstream analysis
+write.csv(counts_Davis_small,file="~/Ferula_RNAseq_Rbased/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_counts_Davis_small_kalliso.csv") # use this for downstream analysis
 
 #For WGCNA input file
 #counts_Davis_WGCNA <- counts_All[rowSums(counts_All > 10) >= 3,] 
 #dim(counts_Davis_WGCNA) #36673 18
-#write.csv(counts_Davis_WGCNA,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_counts_WGCNA_kalliso.csv")
+#write.csv(counts_Davis_WGCNA,file="~/Ferula_RNAseq_Rbased/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_counts_WGCNA_kalliso.csv")
 ```
 
 ```{r}
@@ -73,7 +73,7 @@ samples_Davis_small <- data.frame(file=colnames(counts_Davis_small),
                     
                       genotype=factor(sub("(S|F|L|R)(2|3|6)","\\2",colnames(counts_Davis_small)))) 
 head(samples_Davis_small)
-save(samples_Davis_small,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_samples_Davis_small_kalliso.Rdata")
+save(samples_Davis_small,file="~/Ferula_RNAseq_Rbased/Kallisto_out/Ferula_RNAse_combined_drap_oases_plant6_samples_Davis_small_kalliso.Rdata")
 ```
 
 #assign group by combining all the experimental factors into one combined factor
@@ -107,7 +107,7 @@ colnames(design1)
 dge <- estimateGLMCommonDisp(dge,design1, verbose = T) #Disp =0.62 , BCV =0.78
 dge <- estimateGLMTrendedDisp(dge,design1)
 dge <- estimateGLMTagwiseDisp(dge,design1)
-save(dge,file="~/Ferula_RNAseq_Analysis/Kallisto_drap_oases_plant6_Davis.dge.Rdata")
+save(dge,file="~/Ferula_RNAseq_Rbased/Kallisto_drap_oases_plant6_Davis.dge.Rdata")
 plotBCV(dge)
 mds.dge <- plotMDS(dge, method = "bcv",labels = dge$samples$group)
 ```
@@ -123,11 +123,11 @@ topTags(dge.lrt)
 summary(decideTestsDGE(dge.lrt,p=0.05))
 #Extract genes with a FDR < 0.01 (could also use 0.05)
 DEgenes1 <- topTags(dge.lrt,n = Inf)$table[topTags(dge.lrt,n = Inf)$table$FDR<0.05,]
-dim(DEgenes1) #1932    6
+dim(DEgenes1) #7709    6
 colnames(DEgenes1)
 #head(DEgenes1)
 #save 
-write.csv(DEgenes1,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes1.csv")
+write.csv(DEgenes1,file="~/Ferula_RNAseq_Rbased/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes1.csv")
 #To find genes that are differentially expressed in gt 2 & 6 vs 3 seperately
 dge.lrt.gt2 <- glmLRT(dge.fit,coef = c("genotype2"))
 topTags(dge.lrt.gt2)
@@ -140,7 +140,7 @@ DEGs1 <- data.frame ("gt2" = as.data.frame(summary(decideTestsDGE(dge.lrt.gt2, p
 rownames(DEGs1) <- c("down", "no", "up")
 DEGs1 <- DEGs1[c("down", "up"),]
 DEGs1
-save(DEGs1, file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEGs1.Rdata")
+save(DEGs1, file="~/Ferula_RNAseq_Rbased/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEGs1.Rdata")
 ```
 
 ```{r}
@@ -168,7 +168,7 @@ p.DEGs1 <- p.DEGs1 + geom_bar(mapping = aes(fill=DE, x = factor(DE), y = number)
 p.DEGs1 <- p.DEGs1 + facet_grid(~genotype) 
 p.DEGs1 <- p.DEGs1 + labs(y = "number of differentially expressed genes", x = "")
 p.DEGs1
-ggsave(p.DEGs1, file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_p.DEGs1.png")
+ggsave(p.DEGs1, file="~/Ferula_RNAseq_Rbased/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_p.DEGs1.png")
 ```
 
 #To find genes that are differentially expressed in trt S, F & L vs R 
@@ -180,11 +180,11 @@ topTags(dge.lrt.trt)
 summary(decideTestsDGE(dge.lrt.trt,p=0.05))
 #Extract genes with a FDR < 0.01 (could also use 0.05)
 DEgenes2 <- topTags(dge.lrt.trt,n = Inf)$table[topTags(dge.lrt.trt,n = Inf)$table$FDR<0.05,]
-write.csv(DEgenes2,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes2.csv")
+write.csv(DEgenes2,file="~/Ferula_RNAseq_Rbased/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes2.csv")
 dim(DEgenes2) #3410  7
 colnames(DEgenes2)
 head(DEgenes2)
-write.table(DEgenes2, "~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_DEgenes2ID.txt", col.names = T, row.names = T)
+write.table(DEgenes2, "~/Ferula_RNAseq_Rbased/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_DEgenes2ID.txt", col.names = T, row.names = T)
 ```
 
 ##To find genes that are differentially expressed in trt S, F & L vs R seperately
@@ -216,7 +216,7 @@ e <- decideTestsDGE(dge.lrt.trtS, p=0.05)
 c <- data.frame(b,a,d,e)
 all_trts <- c
 colnames(all_trts) <- c("Gene","Flower","Leaf","Stem")
-write.table(all_trts, "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/Kallisto_out/all_trts_kallisto_drap_oases_plant6_Davis_DEgenes2.txt", col.names = T, row.names = T)
+write.table(all_trts, "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Rbased/Kallisto_out/all_trts_kallisto_drap_oases_plant6_Davis_DEgenes2.txt", col.names = T, row.names = T)
 
 #For checking the genes without three zero run this command then we want to see DEGs are located in which modules.
 #grep -v "0 0 0" all_trts_kallisto_drap_oases_plant6_Davis_DEgenes2.txt > all_trts_kallisto_drap_oases_plant6_Davis_DEgenes2_NoThreeZero.txt 
@@ -231,7 +231,7 @@ DEGs2 <- data.frame ("trtF" = as.data.frame(summary(decideTestsDGE(dge.lrt.trtF,
 rownames(DEGs2) <- c("down", "no", "up")
 DEGs2 <- DEGs2[c("down", "up"),]
 DEGs2
-save(DEGs2, file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_DEGs2.Rdata")
+save(DEGs2, file="~/Ferula_RNAseq_Rbased/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_DEGs2.Rdata")
 DEGs2.melt <- melt(DEGs2)
 DEGs2.melt$DE <- rep(c("down", "up"), 3)
 colnames(DEGs2.melt) <- c("genotype", "number", "DE")
@@ -249,7 +249,7 @@ p.DEGs2 <- p.DEGs2 + geom_bar(mapping = aes(fill=DE, x = factor(DE), y = number)
 p.DEGs2 <- p.DEGs2 + facet_grid(~genotype) 
 p.DEGs2 <- p.DEGs2 + labs(y = "number of differentially expressed genes", x = "")
 p.DEGs2
-ggsave(p.DEGs2, file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_p.DEGs2.png")
+ggsave(p.DEGs2, file="~/Ferula_RNAseq_Rbased/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_p.DEGs2.png")
 ```
 
 

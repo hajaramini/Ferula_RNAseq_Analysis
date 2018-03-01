@@ -218,11 +218,11 @@ dynamicMods <- cutreeDynamic(dendro = geneTree, distM = dissTOM,
                             minClusterSize = minModuleSize);
 
 table(dynamicMods)
-table(dynamicMods) %>% length() # 55 modules 
+table(dynamicMods) %>% length() # 66 modules 
 save(dynamicMods, file = "dynamicMods.Rdata")
 # Convert numeric lables into colors
 dynamicColors = labels2colors(dynamicMods) 
-table(dynamicColors)
+table(dynamicColors)  %>% length() #66
 # Plot the dendrogram and colors CRderneath
 sizeGrWindow(8,6)
 pdf("Plot_v4/Final_modules.pdf",height=8,width=12)
@@ -256,7 +256,7 @@ plot(METree, main = "Clustering of module eigengenes",
      xlab = "", sub = "")
 abline(h=MEDissThres, col = "red")
 # Call an automatic merging 
-merge = mergeCloseModules(datExpr0tissues, dynamicColors, cutHeight = MEDissThres, verbose = 3) #Calculating 45 module eigengenes in given set
+merge = mergeCloseModules(datExpr0tissues, dynamicColors, cutHeight = MEDissThres, verbose = 3) #Calculating 44 module eigengenes in given set
 # The merged module colors
 mergedColors = merge$colors
 # Eigengenes of the new merged modules:
@@ -273,11 +273,11 @@ dev.off()
 moduleColors = mergedColors
 # Construct numerical labels corresponding to the colors
 colorOrder = c("grey", standardColors(50));
-moduleLabels = match(moduleColors, colorOrder)-1; 
+moduleLabels = match(moduleColors, colorOrder)-1; #32 modules
 
 moduleNumber <- merge$colors #for know about each gene's module number
 table (moduleNumber)  %>% length()
-#[1] 45
+#[1] 44
 write.table(moduleNumber,file = "~/Ferula_RNAseq_Analysis/WGCNA_out/moduleNumber.txt")
 MEs = mergedMEs
 save(MEs,moduleColors,moduleNumber, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEs_all_tissues_Davis.Rdata")
@@ -285,18 +285,18 @@ save(MEs,moduleColors,moduleNumber, file = "/Network/Servers/avalanche.plb.ucdav
 #Next we calculate the principle components for visualizations(Julin's suggestion), see the mean of expression of flower, stem, root and leaf in tissue modules 
 
 ```{r}
-dim(MEs) #12 45 
-MEs_order <- MEs[c("8","4","12","9","5","1","10","6","2","11","7","3"),]
-samples_order <- c("DR2", "DR3" , "DR6", "DS2","DS3","DS6","DF2","DF3","DF6","DL2","DL3","DL6")
-save(MEs_order, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEs_order_all_tissues_Davis.Rdata")
+dim(MEs) #12 44 
+#MEs_order <- MEs[c("8","4","12","9","5","1","10","6","2","11","7","3"),]
+#samples_order <- c("DR2", "DR3" , "DR6", "DS2","DS3","DS6","DF2","DF3","DF6","DL2","DL3","DL6")
+#save(MEs_order, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEs_order_all_tissues_Davis.Rdata")
 colors = names(table(moduleColors))
 ordergenes = geneTree$order
-pdf("~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/ModuleEigengeneVisualization.pdf",height=6,width=6)
+pdf("~/Ferula_RNAseq_Analysis/WGCNA_out/Plot_v4/ModuleEigengeneVisualization.pdf",height=6,width=6)
 
 par(mfrow=c(1,1), mar=c(6, 5, 2, 2) + 0.1, cex=1)
 
 for (which.module in names(table(moduleColors))){
-  ME = MEs_order[, paste("ME",which.module, sep="")] 
+  ME = MEs[, paste("ME",which.module, sep="")] 
   barplot(ME, col=which.module, main="", cex.main=2, 
       ylab="eigengene expression",xlab="array sample",
       names.arg = samples_order, cex.names = 0.7)
@@ -317,7 +317,7 @@ NumberMissingByArray=apply( is.na(data.frame(datExpr0tissues)),1, sum) # no miss
 
 ```{r}
 sizeGrWindow(9, 5)
-pdf("Plot_v4/meanExpressionByArray.pdf",height=6,width=6)
+pdf("~/Ferula_RNAseq_Analysis/WGCNA_out/Plot_v4/meanExpressionByArray.pdf",height=6,width=6)
 barplot(meanExpressionByArray,
 xlab = "Sample", ylab = "Mean expression",
 main ="Mean expression across samples",
@@ -331,13 +331,13 @@ names.arg = c("DS6", "DF6", "DL6", "DR3", "DS3", "DF3", "DL3", "DR2" ,"DS2", "DF
 variancedatExpr=as.vector(apply(as.matrix(datExpr0tissues),2,var, na.rm=T))
 summary(variancedatExpr)
 #Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
-#0.08279  1.38195  2.29052  2.67872  3.50454 21.67623 
+#0.08303  1.56754  2.60028  2.94202  3.88585 21.66500  
 summary(meanExpressionByArray)
 #Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-#0.6556  1.2670  1.5456  1.4933  1.7875  2.0159
+#1.405   1.959   2.488   2.343   2.615   3.036
 datExpr0tissues.largeSD<-datExpr0tissues[,variancedatExpr>0.5] # no idea to pick cut off for sd
 #we decided to keep all genes NOT just largeSD
-save(datExpr0tissues.largeSD, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/datExpr0tissues.largeSD.Rdata")
+#save(datExpr0tissues.largeSD, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/datExpr0tissues.largeSD.Rdata")
 ```
 #see the classification of samples (same as we have done before)
 
@@ -345,6 +345,7 @@ save(datExpr0tissues.largeSD, file = "/Network/Servers/avalanche.plb.ucdavis.edu
 sizeGrWindow(9, 5)
 pdf("Plot_v4/ClusterTreeSamples.pdf",height=6,width=6)
 plotClusterTreeSamples(datExpr=datExpr0tissues)
+dev.off()
 ```
 
 #Intramodular connectivity, module membership, and screening for intramodular hub genes
@@ -353,7 +354,7 @@ plotClusterTreeSamples(datExpr=datExpr0tissues)
 ```{r}
 datME=moduleEigengenes(datExpr0tissues,moduleColors)$eigengenes  # same as a MEs, so in signedKME function use MEs instead of datME
 datKME=signedKME(datExpr0tissues, MEs, outputColumnName="MM.")
-datKME %>% dim() #36673  45
+datKME %>% dim() #27694  44
 # Display the first few rows of the data frame
 head(datKME)
 #run FilterGenes for each modules separetaly
@@ -362,11 +363,11 @@ FilterGenes.palevioletred3 <- abs(datKME$MM.palevioletred3) >.8 #got FALSE & TRU
 table(FilterGenes.palevioletred3)
 #FilterGenes.palevioletred3
 #FALSE  TRUE 
-#36250   423 
+#27381    313 
 FilterGenes.turquoise <- abs(datKME$MM.turquoise) >.8
 table(FilterGenes.turquoise)
 #FALSE  TRUE 
-#34189  2484
+#25163 2531
 #NOW important to know Which genes were filtered in?
 MEturquoise.small <- dimnames(data.frame(datExpr0tissues))[[2]][FilterGenes.turquoise]
 head(MEturquoise.small)
@@ -379,12 +380,12 @@ save(MEturquoise.small,file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volume
 #**need trait file** 
 
 ```{r}
-samples_order <- c("DR2", "DR3" , "DR6", "DS2","DS3","DS6","DF2","DF3","DF6","DL2","DL3","DL6")
-datExpr0tissues_order <- datExpr0tissues[c("DR2", "DR3" , "DR6", "DS2","DS3","DS6","DF2","DF3","DF6","DL2","DL3","DL6"),]
-save(datExpr0tissues_order, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/datExpr0tissues_order.Rdata")
+#samples_order <- c("DR2", "DR3" , "DR6", "DS2","DS3","DS6","DF2","DF3","DF6","DL2","DL3","DL6")
+#datExpr0tissues_order <- datExpr0tissues[c("DR2", "DR3" , "DR6", "DS2","DS3","DS6","DF2","DF3","DF6","DL2","DL3","DL6"),]
+#save(datExpr0tissues_order, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/datExpr0tissues_order.Rdata")
 
 #Loading trait data I have to prepare dataset for matabolites
-traitData = read.csv("~/Ferula_RNAseq_Rbased/WGCNA_out/Metabolite_Traits.csv"); #just Davis libraries
+traitData = read.csv("~/Ferula_RNAseq_Analysis/WGCNA_out/Metabolite_Traits.csv"); #just Davis libraries
 #seperate two files based on the unit of matabolite
 traitDataCoumarin <-traitData[ ,c(1:2,4)] #remove UMP because all of them is zero, I just convert to 0.1 but prefer to do mot consider UMP
 traitDataTerpen <-traitData[ ,c(1, 5:8)]
@@ -399,12 +400,10 @@ save(traitData,traitDataCoumarin,traitDataTerpen, file = "~/Ferula_RNAseq_Analys
 
 ```{r}
 datTraitsCoumarin = traitDataCoumarin # we do not consider first 
-rownames(datTraitsCoumarin) <- datTraitsCoumarin
 rownames(datTraitsCoumarin) <- datTraitsCoumarin$Sample
 # Form a data frame analogous to expression data that will hold the metabolite traits just for Terpen.
 datTraitsTerpen = traitDataTerpen 
 rownames(datTraitsTerpen) <- datTraitsTerpen$Sample
-#for each tissue, separately
 ```
 
 #We now have the expression data in the variable datExpr, and the corresponding clinical traits in the variable datTraits. Before we continue with network construction and module detection, we visualize how the clinical traits relate to the sample dendrogram.
@@ -413,25 +412,20 @@ rownames(datTraitsTerpen) <- datTraitsTerpen$Sample
 # Re-cluster samples
 sampleTree2 = hclust(dist(datExpr0tissues), method = "average")
 # Convert traits to a color representation: white means low, red means high, grey means missing entry
-datTraits.mod <- datTraits[,-1]
+#datTraits.mod <-traitData[,-1]
 datTraitsCoumarin.mod<- datTraitsCoumarin[,-1]
 datTraitsTerpen.mod<- datTraitsTerpen[,-1]
 traitColors = numbers2colors(datTraits.mod, signed = FALSE);
 traitColors <- traitColors[,-2] #remove UMP column, because it cuases all gray (0.1)
 traitColors_coumarin = numbers2colors(datTraitsCoumarin.mod, signed = FALSE)
 traitColors_terpen = numbers2colors(datTraitsTerpen.mod, signed = FALSE)
-# Plot the sample dendrogram and the colors underneath.
-sizeGrWindow(7,6);
-pdf(file = "Plot/SampleDendrogramTraitHeatmap.pdf", wi = 7, he = 6);
-par(mfrow=c(1,1));
-plotDendroAndColors(sampleTree2, traitColorsCoumarin, groupLabels = names(datTraitsCoumarin), main = "Sample dendrogram and trait heatmap")
 ```
 
 # Plot the sample dendrogram and the colors underneath.
 
 ```{r}
 sizeGrWindow(7,6);
-pdf(file = "~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/SampleDendrogramTraitCoumarinHeatmap.pdf", wi = 7, he = 6);
+pdf(file = "~/Ferula_RNAseq_Analysis/WGCNA_out/Plot_v4/SampleDendrogramTraitCoumarinHeatmap.pdf", wi = 7, he = 6);
 par(mfrow=c(1,2));
 plotDendroAndColors(sampleTree2, traitColors_coumarin, groupLabels = names(datTraitsCoumarin.mod), main = "Sample dendrogram and trait heatmap")
 # Plot the sample dendrogram and the colors underneath.
@@ -462,17 +456,17 @@ plot(hclustdatME, main="Clustering tree based of the module eigengenes")
 #First Correlate the module eigengenes with the trait
  
 ```{r}
-signif(cor(datTraits$UMF,datME, use="p"),2)
+signif(cor(traitData$UMF,datME, use="p"),2)
 #it is possible to do for each trait and each module which looked most interesting. An advantage of this approach is that it allows ut to compute p-values using
-cor.test(datTraits$UMF, datME$MEbrown)
+cor.test(traitData$UMF, datME$MEbrown)
 
 #The following code can be used to get all p-values:
-p.values_UMF = corPvalueStudent(cor(datTraits$UMF,datME, use="p"), nSamples = length(datTraits$UMF))
-p.values_Luteolin = corPvalueStudent(cor(datTraits$Luteolin,datME, use="p"), nSamples = length(datTraits$Luteolin))
-p.values_HM = corPvalueStudent(cor(datTraits$HM,datME, use="p"), nSamples = length(datTraits$HM))
-p.values_HS = corPvalueStudent(cor(datTraits$HS,datME, use="p"), nSamples = length(datTraits$HS))
-p.values_OS = corPvalueStudent(cor(datTraits$OS,datME, use="p"), nSamples = length(datTraits$OS))
-p.values_VSC = corPvalueStudent(cor(datTraits$VSC,datME, use="p"), nSamples = length(datTraits$VSC))
+p.values_UMF = corPvalueStudent(cor(traitData$UMF,datME, use="p"), nSamples = length(traitData$UMF))
+p.values_Luteolin = corPvalueStudent(cor(traitData$Luteolin,datME, use="p"), nSamples = length(traitData$Luteolin))
+p.values_HM = corPvalueStudent(cor(traitData$HM,datME, use="p"), nSamples = length(traitData$HM))
+p.values_HS = corPvalueStudent(cor(traitData$HS,datME, use="p"), nSamples = length(traitData$HS))
+p.values_OS = corPvalueStudent(cor(traitData$OS,datME, use="p"), nSamples = length(traitData$OS))
+p.values_VSC = corPvalueStudent(cor(traitData$VSC,datME, use="p"), nSamples = length(traitData$VSC))
 
 #save
 write.table(p.values_HM, file = "~/Ferula_RNAseq_Analysis/WGCNA_out/p.values_HM.csv", row.names=FALSE, sep="\t")
@@ -483,37 +477,35 @@ write.table(p.values_HM, file = "~/Ferula_RNAseq_Analysis/WGCNA_out/p.values_HM.
 
 ```{r}
 #UMF
-GS1_UMF=as.numeric(cor(datTraits$UMF,datExpr0tissues_order, use="p"))
+GS1_UMF=as.numeric(cor(traitData$UMF,datExpr0tissues, use="p"))
 GeneSignificance_UMF=abs(GS1_UMF)
 # Next module significance is defined as average gene significance.
 ModuleSignificance_UMF=tapply(GeneSignificance_UMF, moduleColors, mean, na.rm=T)
 #Luteolin
-GS1_Luteolin=as.numeric(cor(datTraits$Luteolin,datExpr0tissues_order, use="p"))
+GS1_Luteolin=as.numeric(cor(traitData$Luteolin,datExpr0tissues, use="p"))
 GeneSignificance_Luteolin=abs(GS1_Luteolin)
 ModuleSignificance_Luteolin=tapply(GeneSignificance_Luteolin, moduleColors, mean, na.rm=T)
 #HM
-GS1_HM=as.numeric(cor(datTraits$HM,datExpr0tissues_order, use="p"))
+GS1_HM=as.numeric(cor(traitData$HM,datExpr0tissues, use="p"))
 GeneSignificance_HM=abs(GS1_HM)
 ModuleSignificance_HM=tapply(GeneSignificance_HM, moduleColors, mean, na.rm=T)
 #HS
-GS1_HS=as.numeric(cor(datTraits$HS,datExpr0tissues_order, use="p"))
+GS1_HS=as.numeric(cor(traitData$HS,datExpr0tissues, use="p"))
 GeneSignificance_HS=abs(GS1_HS)
 ModuleSignificance_HS=tapply(GeneSignificance_HS, moduleColors, mean, na.rm=T)
 #OS
-GS1_OS=as.numeric(cor(datTraits$OS,datExpr0tissues_order, use="p"))
+GS1_OS=as.numeric(cor(traitData$OS,datExpr0tissues, use="p"))
 GeneSignificance_OS=abs(GS1_OS)
 ModuleSignificance_OS=tapply(GeneSignificance_OS, moduleColors, mean, na.rm=T)
 #VSC
-GS1_VSC=as.numeric(cor(datTraits$VSC,datExpr0tissues_order, use="p"))
+GS1_VSC=as.numeric(cor(traitData$VSC,datExpr0tissues, use="p"))
 GeneSignificance_VSC=abs(GS1_VSC)
 ModuleSignificance_VSC=tapply(GeneSignificance_VSC, moduleColors, mean, na.rm=T)
-
-
 
 #The advantage of this second approach is that it can be used for any gene significance measure. A gene significance measure could be defined without reference to a sample trait. For example, it could indicate pathway membership (1 or 0) or gene essentiality (1 or 0), etc
 
 sizeGrWindow(8,10)
-pdf(file = "~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/GeneSignificanceTraits_v2.pdf", width = 8, height = 10);
+pdf(file = "~/Ferula_RNAseq_Analysis/WGCNA_out/Plot_v4/GeneSignificanceTraits_v2.pdf", width = 8, height = 10);
 #par(mfrow = c(6,1))
 plotModuleSignificance(GeneSignificance_UMF,moduleColors)
 plotModuleSignificance(GeneSignificance_Luteolin,moduleColors)
@@ -528,3 +520,4 @@ dev.off()
 #start to downstream analysis
 #find DEgene's module number
 mkdir Post_WGCNA_Analysis, then cp muduleNumber.txt to find each DEgenes's module number
+

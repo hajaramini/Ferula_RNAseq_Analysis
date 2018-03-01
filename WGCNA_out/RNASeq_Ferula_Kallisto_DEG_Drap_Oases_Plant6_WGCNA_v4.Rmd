@@ -6,6 +6,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+#last version
 
 ##Goal of this script is to build networks for Ferula assafoetida RNAseq data using WGCNA. Difference between this version and v3 is that in this script is run just in DAVIS facility. Just removing genes with low count reads 
 #This is the last version for Networking
@@ -23,16 +24,20 @@ options(stringsAsFactors = FALSE) # have to run that
 ```
 
 ```{r}
-counts_WGCNA <- read.csv("~/Ferula_RNAseq_Analysis/WGCNA_out/Ferula_RNAseq_combined_drap_oases_plant6_counts_WGCNA_kalliso.csv", header = T , row.names=1)
-dim(counts_WGCNA) # 36673 18
+#import Davis libraries
+counts_WGCNA <- read.csv("~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_Davis_counts_kallisto.csv", header = T , row.names=1)
+dim(counts_WGCNA) # 60134 12
 colnames(counts_WGCNA)
-counts_Davis <- counts_WGCNA[,c(1,2,3,4,5,6,7,8,9,10,11,12)]
-dim(counts_Davis) #36673  12
-leaf <- counts_Davis[,c(3, 7, 11)]
-stem <- counts_Davis[,c(1, 5, 9)]
-root <- counts_Davis[,c(4, 8, 12)]
-flower <- counts_Davis[,c(2, 6, 10)]
-tissuesvoom = t(voom(counts_Davis)$E) #all four tissues together
+# eliminating genes with low expression levels by retaining genes with > 10 reads in > 3 samples
+counts_WGCNA <-counts_WGCNA[rowSums(counts_WGCNA > 10) >= 3,]
+counts_WGCNA <- counts_WGCNA[,c("R2","R3","R6","S2","S3","S6","F2","F3","F6","L2","L3","L6")] #change the order or colnames to put same tissues near each other
+write.csv(counts_WGCNA, file="~/Ferula_RNAseq_Analysis/WGCNA_out/Ferula_RNAseq_combined_drap_oases_plant6_small_counts_WGCNA.csv")
+
+leaf <- counts_WGCNA[,c(10, 11, 12)]
+stem <- counts_WGCNA[,c(4, 5, 6)]
+root <- counts_WGCNA[,c(1, 2, 3)]
+flower <- counts_WGCNA[,c(7, 8, 9)]
+tissuesvoom = t(voom(counts_WGCNA)$E) #all four tissues together
 leafvoom = t(voom(leaf)$E)
 stemvoom = t(voom(stem)$E)
 rootvoom = t(voom(root)$E)
@@ -43,11 +48,11 @@ flowervoom = t(voom(flower)$E)
 datExpr0tissues = as.data.frame((tissuesvoom))
 rownames(datExpr0tissues) #12
 nGenes <- ncol(datExpr0tissues)
-nGenes #36673
+nGenes #22995
 datExpr0root = as.data.frame((rootvoom));
 rownames(datExpr0root) #number of the samples
 nSamples <- nrow(datExpr0root) #3
-nGenes <- ncol(datExpr0root) #36673
+nGenes <- ncol(datExpr0root) #22995
 nSamples
 gsg = goodSamplesGenes(datExpr0root)
 #Error in goodGenes(datExpr, goodSamples, goodGenes, minFraction = minFraction,Too few genes with valid expression levels in the required number of samples. So I could not use each tissue dataset for constructing network
@@ -85,17 +90,17 @@ multiExpr[[3]] = list(data = as.data.frame(rootvoom))
 names(multiExpr[[3]]$data) = colnames(rootvoom)
 rownames(multiExpr[[3]]$data) = rownames(rootvoom)
 nSamples <- nrow(multiExpr[[3]]$data) #3
-nGenes <- ncol(multiExpr[[3]]$data) #36673
+nGenes <- ncol(multiExpr[[3]]$data) #22995
 multiExpr[[4]] = list(data = as.data.frame(flowervoom))
 names(multiExpr[[4]]$data) = colnames(flowervoom)
 rownames(multiExpr[[4]]$data) = rownames(flowervoom)
 nSamples <- nrow(multiExpr[[4]]$data) #3
-nGenes <- ncol(multiExpr[[4]]$data) #36673
+nGenes <- ncol(multiExpr[[4]]$data) #22995
 multiExpr[[5]] = list(data = as.data.frame(tissuesvoom))
 names(multiExpr[[5]]$data) = colnames(tissuesvoom)
 rownames(multiExpr[[5]]$data) = rownames(tissuesvoom)
 nSamples <- nrow(multiExpr[[5]]$data) #12
-nGenes <- ncol(multiExpr[[5]]$data) #36673
+nGenes <- ncol(multiExpr[[5]]$data) #22995
 nSamples
 exprSize = checkSets(multiExpr)
 exprSize
@@ -107,7 +112,7 @@ sampleTrees = list()
 for (set in 1:nSets) {
 sampleTrees[[set]] = hclust(dist(multiExpr[[set]]$data), method = "average")
 }
-pdf(file = "~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/SampleClustering.pdf", width = 12, height = 12);
+pdf(file = "~/Ferula_RNAseq_Analysis/WGCNA_out/Plot_v4/SampleClustering.pdf", width = 12, height = 12);
 par(mfrow=c(2,1))
 par(mar = c(0, 4, 2, 0))
 for (set in 1:nSets)
@@ -152,7 +157,7 @@ for (set in 1:nSets) {
 
 ```{r}
 sizeGrWindow(8, 6)
-pdf(file = "~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/scaleFreeAnalysis.pdf", wi = 8, he = 6)
+pdf(file = "~/Ferula_RNAseq_Analysis/WGCNA_out/Plot_v4/scaleFreeAnalysis.pdf", wi = 8, he = 6)
 par(mfcol = c(2,2));
 par(mar = c(4.2, 4.2 , 2.2, 0.5))
 cex1 = 0.7;
@@ -177,16 +182,15 @@ legend("topright", legend = setLabels, col = colors, pch = 20) ;
 dev.off();
 ```
 #we will calculate all of the necessary values to run WGCNA
-#choose 9
+#choose 10
 
 ```{r}
-softPower = 9
-datExpr0tissues
+softPower = 10
 adjacency = adjacency(datExpr0tissues,power=softPower,type="signed"); #picked signed based on the WGCNA suggestion. prefer signed vs unsigned
-dim(adjacency) #36673 36673
+dim(adjacency) #  27694 27694
 diag(adjacency)=0
 dissTOM   = 1-TOMsimilarity(adjacency, TOMType="signed")
-dim(dissTOM) #36673 36673
+dim(dissTOM) #27694 27694
 save(adjacency, file = "adjacency.Davis.RData")
 save(dissTOM, file = "dissTOM.Davis.Rdata")
 ```
@@ -201,7 +205,7 @@ geneTree  = flashClust(as.dist(dissTOM), method="average")
 save(geneTree, file = "geneTree.Rdata")
 # display the networks visually
 sizeGrWindow(6,16)
-pdf("~/Ferula_RNAseq_Rbased/WGCNA_out/Plot_v4/dendrogram.pdf",height=6,width=16)
+pdf("~/Ferula_RNAseq_Analysis/WGCNA_out/Plot_v4/dendrogram.pdf",height=6,width=16)
 plot(geneTree,xlab="",sub="",main="Gene clustering on TOM-based dissimilarity", labels=FALSE,hang=0.04);
 dev.off()  #These are "good" data, since there are a lot of distinct branches
 
@@ -233,7 +237,7 @@ dev.off()
 
 ```{r}
 #all tissues
-# Calculate eigengenes
+#Calculate eigengenes
 #load("dataInput_v4.RData")
 MEList <- moduleEigengenes(datExpr0tissues, colors = dynamicColors) # Calculates module eigengenes (1st principal component) of modules in a given single dataset. 
 MEs <- MEList$eigengenes
@@ -269,9 +273,14 @@ dev.off()
 moduleColors = mergedColors
 # Construct numerical labels corresponding to the colors
 colorOrder = c("grey", standardColors(50));
-moduleLabels = match(moduleColors, colorOrder)-1; #45 modules after merging use this for number of each genes's modules
+moduleLabels = match(moduleColors, colorOrder)-1; 
+
+moduleNumber <- merge$colors #for know about each gene's module number
+table (moduleNumber)  %>% length()
+#[1] 45
+write.table(moduleNumber,file = "~/Ferula_RNAseq_Analysis/WGCNA_out/moduleNumber.txt")
 MEs = mergedMEs
-save(MEs,moduleColors, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEs_all_tissues_Davis.Rdata")
+save(MEs,moduleColors,moduleNumber, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEs_all_tissues_Davis.Rdata")
 ```
 #Next we calculate the principle components for visualizations(Julin's suggestion), see the mean of expression of flower, stem, root and leaf in tissue modules 
 
@@ -515,3 +524,7 @@ plotModuleSignificance(GeneSignificance_VSC,moduleColors)
 dev.off()
 #Figure: Barplot of module significance defined as the mean gene significance across all genes in the module. The ... and ... modules are the most promising.
 ```
+
+#start to downstream analysis
+#find DEgene's module number
+mkdir Post_WGCNA_Analysis, then cp muduleNumber.txt to find each DEgenes's module number

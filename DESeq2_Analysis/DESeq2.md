@@ -679,3 +679,5 @@ dev.off()
 ```{r}
 write.table(mycl,"mycl.SvsL.txt",sep="\t") #used this file to see the number of cluster for each gene ID
 ```
+#for getting the gene's cluster in each DEgenes cluster
+#cat mycl.FvsL.txt | awk '{if ($2==6) print;}' > mycl.FvsL.cluster6.txt

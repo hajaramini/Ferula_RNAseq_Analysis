@@ -30,6 +30,7 @@ write.csv(counts_All, file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_
 counts_Davis <- counts_All[,c("DS6", "DF6","DL6","DR3", "DS3", "DF3" ,"DL3", "DR2", "DS2" ,"DF2" ,"DL2", "DR6")]
 colnames(counts_Davis) <- c("S6", "F6","L6","R3", "S3", "F3" ,"L3", "R2", "S2" ,"F2" ,"L2", "R6")
 dim(counts_Davis) #60134 12
+counts_Davis <- counts_Davis[,c("R2","R3","R6","S2","S3","S6","F2","F3","F6","L2","L3","L6")] #change the order or colnames to put same tissues near each other
 write.csv(counts_Davis, file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_Davis_counts_kallisto.csv")
 ```
 
@@ -53,17 +54,18 @@ head(samples_Davis)
 #convert NA to zero
 counts_Davis[is.na(counts_Davis)]<-0
 # eliminating genes with low expression levels by retaining genes with > 10 reads in > 3 samples
-counts_Davis_small <-counts_Davis[rowSums(counts_Davis > 10) >= 3,] 
-dim(counts_Davis_small) #22995  12
+counts_Davis_small <-counts_Davis[rowSums(counts_Davis > 10) >= 2,] 
+dim(counts_Davis_small) #27694   12
 dim(counts_Davis) #60134
-write.csv(counts_Davis, file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_Davis_small_counts_kallisto.csv") # use this for downstream analysis
+write.csv(counts_Davis_small, file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_Davis_small_counts_kallisto.csv") # use this for downstream analysis
+
 ```
 
 ```{r}
 samples_Davis_small <- data.frame(file=colnames(counts_Davis_small),                     
-                      trt=factor(sub("(S|F|L|R)(2|3|6)","\\1",colnames(counts_Davis_small))),
+                      trt=factor(sub("(R|S|F|L)(2|3|6)","\\1",colnames(counts_Davis_small))),
                     
-                      genotype=factor(sub("(S|F|L|R)(2|3|6)","\\2",colnames(counts_Davis_small)))) 
+                      genotype=factor(sub("(R|S|F|L)(2|3|6)","\\2",colnames(counts_Davis_small)))) 
 head(samples_Davis_small)
 save(samples_Davis_small,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAse_combined_drap_oases_plant6_samples_Davis_small_kalliso.Rdata")
 ```
@@ -96,7 +98,7 @@ samples_Davis_small$trt <- relevel(samples_Davis_small$trt,ref="R")
 design1 <- model.matrix(~genotype+trt, data=samples_Davis_small)
 colnames(design1)
 #First the overall dispersion
-dge <- estimateGLMCommonDisp(dge,design1, verbose = T) #Disp =0.62 , BCV =0.78
+dge <- estimateGLMCommonDisp(dge,design1, verbose = T) #Disp =0.66 , BCV =0.81
 dge <- estimateGLMTrendedDisp(dge,design1)
 dge <- estimateGLMTagwiseDisp(dge,design1)
 save(dge,file="~/Ferula_RNAseq_Analysis/Kallisto_drap_oases_plant6_Davis.dge.Rdata")
@@ -115,7 +117,7 @@ topTags(dge.lrt)
 summary(decideTestsDGE(dge.lrt,p=0.05))
 #Extract genes with a FDR < 0.01 (could also use 0.05)
 DEgenes1 <- topTags(dge.lrt,n = Inf)$table[topTags(dge.lrt,n = Inf)$table$FDR<0.05,]
-dim(DEgenes1) #1932    6
+dim(DEgenes1) # 2438   6
 colnames(DEgenes1)
 #head(DEgenes1)
 #save 
@@ -173,7 +175,7 @@ summary(decideTestsDGE(dge.lrt.trt,p=0.05))
 #Extract genes with a FDR < 0.01 (could also use 0.05)
 DEgenes2 <- topTags(dge.lrt.trt,n = Inf)$table[topTags(dge.lrt.trt,n = Inf)$table$FDR<0.05,]
 write.csv(DEgenes2,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes2.csv")
-dim(DEgenes2) #3410  7
+dim(DEgenes2) #3823  7
 colnames(DEgenes2)
 head(DEgenes2)
 write.table(DEgenes2, "~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_DEgenes2ID.txt", col.names = T, row.names = T)
@@ -199,7 +201,7 @@ a <- decideTestsDGE(dge.lrt.trtF, p=0.05)
 #a[1:3]
 #a[1:3,]
 #a[1:3,1]
-dim(a) #22995 1
+dim(a) #27694   1
 b <- rownames(dge.lrt.trtF$coefficients)
 c <- data.frame(b,a)
 dge.lrt.trtL <- glmLRT(dge.fit,coef = c("trtL"))

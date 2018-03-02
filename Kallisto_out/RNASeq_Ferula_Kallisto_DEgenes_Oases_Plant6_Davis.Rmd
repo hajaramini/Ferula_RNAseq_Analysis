@@ -340,16 +340,105 @@ colnames(vstMat.dge.log2response.LvsR) <- sub(".L","",colnames(vstMat.dge.log2re
 save(vstMat.dge.log2response.LvsR,file="~/Ferula_RNAseq_Analysis/Kallisto_out/vstMat.dge.log2response.LvsR.Rdata")
 ```
 
+#To see the expression pattern for all 10 DE genes of comparison of FvsR
+
 ```{r}
-vstMat.dge.log2response.FvsR.melt <- melt(vstMat.dge.log2response.FvsR)
-head(vstMat.dge.log2response.FvsR.melt)
-class(vstMat.dge.log2response.FvsR.melt$Var2)
-vstMat.dge.log2response.FvsR.melt
-vstMat.dge.log2response.FvsR.melt$Var2 <-rownames(vstMat.dge.melt.mean)
-unique(vstMat.dge.log2response.FvsR.melt$Var2)
+topTags(dge.lrt.trtF)
+#("oases6_k49_Locus_2739_Transcript_5_1","oases6_k25_Locus_6897_Transcript_5_2","oases2_k43_Locus_20622_Transcript_5_1","oases3_k49_Locus_48413_Transcript_4_1","oases6_k49_Locus_58445_Transcript_2_1","oases6_k49_Locus_34415_Transcript_1_1","oases3_k25_Locus_54713_Transcript_9_1","oases2_k25_Locus_49164_Transcript_1_1","oases2_k25_Locus_50568_Transcript_1_1","oases6_k31_Locus_3792_Transcript_10_2")
+```
 
-vstMat.dge.log2response.FvsR.melt$gt <- gsub("(R|S|F|L)(2|3|6)","\\2", vstMat.dge.log2response.FvsR.melt$Var2)
+```{r}
+library(edgeR)
+dge.nolow <- DGEList(counts=counts_Davis_small,group=samples_Davis_small$group) 
+length(colnames(counts_Davis_small)) #12
+dge.nolow<-calcNormFactors(dge.nolow, method = "TMM")
+# look at the normalization factors
+temp<-log2(cpm(dge.nolow))
+hist(temp)
+#checking expression pattern with raw count data
+Topgenes.counts.FvsR <- counts_Davis_small[c("oases6_k49_Locus_2739_Transcript_5_1","oases6_k25_Locus_6897_Transcript_5_2","oases2_k43_Locus_20622_Transcript_5_1","oases3_k49_Locus_48413_Transcript_4_1","oases6_k49_Locus_58445_Transcript_2_1","oases6_k49_Locus_34415_Transcript_1_1","oases3_k25_Locus_54713_Transcript_9_1","oases2_k25_Locus_49164_Transcript_1_1","oases2_k25_Locus_50568_Transcript_1_1","oases6_k31_Locus_3792_Transcript_10_2"),]
+#convert row and column for better understanding
+t.Topgenes.counts.FvsR <- as.data.frame(t(Topgenes.counts.FvsR))
+t.Topgenes.counts.FvsR$gt <- gsub("(R|S|F|L)(2|3|6)","\\2",rownames(t.Topgenes.counts.FvsR))
+t.Topgenes.counts.FvsR$trt <- gsub("(R|S|F|L)(2|3|6)","\\1",rownames(t.Topgenes.counts.FvsR))
+#visualize 
+library(ggplot2)
+mt.Topgenes.counts.FvsR <- melt(t.Topgenes.counts.FvsR)
+mt.Topgenes.counts.FvsR
 
-vstMat.dge.log2response.FvsR.melt$trt <- gsub("(R|S|F|L)(2|3|6)","\\1", vstMat.dge.log2response.FvsR.melt$Var2)
-                                           `
+p<- ggplot(mt.Topgenes.counts.FvsR, aes(gt, value)) +
+  geom_boxplot(aes(color = trt)) +
+  facet_grid(trt ~ variable) 
+ggsave(p, file="~/Ferula_RNAseq_Analysis/Kallisto_out/expression_pattern_topgenes_FvsR.png",width=25,height=25)
+```
+
+#To see the expression pattern for all 10 DE genes of comparison of LvsR
+
+```{r}
+topTags(dge.lrt.trtL)
+#("oases6_CL29Contig9_1","oases2_CL266Contig1_1","oases6_k31_Locus_390_Transcript_23_1","oases3_CL39Contig2_1","oases3_CL153Contig3_2","oases6_CL10402Contig1_2","oases6_k25_Locus_23210_Transcript_3_1","oases3_CL13Contig1_5","oases2_CL595Contig1_1","oases2_k25_Locus_45065_Transcript_1_1")
+
+#checking expression pattern with raw count data
+Topgenes.counts.LvsR <- counts_Davis_small[c("oases6_CL29Contig9_1","oases2_CL266Contig1_1","oases6_k31_Locus_390_Transcript_23_1","oases3_CL39Contig2_1","oases3_CL153Contig3_2","oases6_CL10402Contig1_2","oases6_k25_Locus_23210_Transcript_3_1","oases3_CL13Contig1_5","oases2_CL595Contig1_1","oases2_k25_Locus_45065_Transcript_1_1"),]
+
+#convert row and column for better understanding
+t.Topgenes.counts.LvsR <- as.data.frame(t(Topgenes.counts.LvsR))
+t.Topgenes.counts.LvsR$gt <- gsub("(R|S|F|L)(2|3|6)","\\2",rownames(t.Topgenes.counts.LvsR))
+t.Topgenes.counts.LvsR$trt <- gsub("(R|S|F|L)(2|3|6)","\\1",rownames(t.Topgenes.counts.LvsR))
+#visualize
+library(ggplot2)
+mt.Topgenes.counts.LvsR <- melt(t.Topgenes.counts.LvsR)
+mt.Topgenes.counts.LvsR
+
+p<- ggplot(mt.Topgenes.counts.LvsR, aes(gt, value)) +
+  geom_boxplot(aes(color = trt)) +
+  facet_grid(trt ~ variable) 
+ggsave(p, file="~/Ferula_RNAseq_Analysis/Kallisto_out/expression_pattern_topgenes_LvsR.png",width=25,height=25)
+```
+
+#To see the expression pattern for all 10 DE genes of comparison of SvsR
+
+```{r}
+topTags(dge.lrt.trtS)
+#("oases6_k25_Locus_23210_Transcript_3_1","oases3_k25_Locus_52353_Transcript_5_1","oases3_k25_Locus_22241_Transcript_3_1","oases2_k25_Locus_45065_Transcript_1_1","oases6_k49_Locus_2808_Transcript_1_1","TRINITY_DN34394_c5_g1_i1","oases3_k49_Locus_29079_Transcript_1_1","oases3_k31_Locus_32529_Transcript_1_1","oases6_CL57Contig4_3","oases3_k37_Locus_32702_Transcript_2_1")
+
+#checking expression pattern with raw count data
+Topgenes.counts.SvsR <- counts_Davis_small[c("oases6_k25_Locus_23210_Transcript_3_1","oases3_k25_Locus_52353_Transcript_5_1","oases3_k25_Locus_22241_Transcript_3_1","oases2_k25_Locus_45065_Transcript_1_1","oases6_k49_Locus_2808_Transcript_1_1","TRINITY_DN34394_c5_g1_i1","oases3_k49_Locus_29079_Transcript_1_1","oases3_k31_Locus_32529_Transcript_1_1","oases6_CL57Contig4_3","oases3_k37_Locus_32702_Transcript_2_1"),]
+
+#convert row and column for better understanding
+t.Topgenes.counts.SvsR <- as.data.frame(t(Topgenes.counts.SvsR))
+t.Topgenes.counts.SvsR$gt <- gsub("(R|S|F|L)(2|3|6)","\\2",rownames(t.Topgenes.counts.SvsR))
+t.Topgenes.counts.SvsR$trt <- gsub("(R|S|F|L)(2|3|6)","\\1",rownames(t.Topgenes.counts.SvsR))
+#visualize
+#library(ggplot2)
+mt.Topgenes.counts.SvsR <- melt(t.Topgenes.counts.SvsR)
+mt.Topgenes.counts.SvsR
+
+p<- ggplot(mt.Topgenes.counts.SvsR, aes(gt, value)) +
+  geom_boxplot(aes(color = trt)) +
+  facet_grid(trt ~ variable) 
+ggsave(p, file="~/Ferula_RNAseq_Analysis/Kallisto_out/expression_pattern_topgenes_SvsR.png",width=25,height=25)
+```
+
+#To see the expression pattern for all 10 DE genes (~genotype+trt)
+
+```{r}
+topTags(dge.lrt.trt)
+#("oases3_k25_Locus_52353_Transcript_5_1","oases2_k43_Locus_20622_Transcript_5_1","oases6_k49_Locus_2739_Transcript_5_1","oases3_k49_Locus_48413_Transcript_4_1","oases6_k25_Locus_6897_Transcript_5_2","oases6_k49_Locus_58445_Transcript_2_1","oases6_k25_Locus_27954_Transcript_3_1", "oases2_k25_Locus_49164_Transcript_1_1","oases3_k25_Locus_54713_Transcript_9_1","oases6_k31_Locus_3792_Transcript_10_2")
+#checking expression pattern with raw count data
+Topgenes.counts <- counts_Davis_small[c("oases3_k25_Locus_52353_Transcript_5_1","oases2_k43_Locus_20622_Transcript_5_1","oases6_k49_Locus_2739_Transcript_5_1","oases3_k49_Locus_48413_Transcript_4_1","oases6_k25_Locus_6897_Transcript_5_2","oases6_k49_Locus_58445_Transcript_2_1","oases6_k25_Locus_27954_Transcript_3_1", "oases2_k25_Locus_49164_Transcript_1_1","oases3_k25_Locus_54713_Transcript_9_1","oases6_k31_Locus_3792_Transcript_10_2"),]
+
+#convert row and column for better understanding
+t.Topgenes.counts <- as.data.frame(t(Topgenes.counts))
+t.Topgenes.counts$gt <- gsub("(R|S|F|L)(2|3|6)","\\2",rownames(t.Topgenes.counts))
+t.Topgenes.counts$trt <- gsub("(R|S|F|L)(2|3|6)","\\1",rownames(t.Topgenes.counts))
+#visualize
+#library(ggplot2)
+mt.Topgenes.counts<- melt(t.Topgenes.counts)
+mt.Topgenes.counts
+
+p<- ggplot(mt.Topgenes.counts, aes(gt, value)) +
+  geom_boxplot(aes(color = trt)) +
+  facet_grid(trt ~ variable) 
+ggsave(p, file="~/Ferula_RNAseq_Analysis/Kallisto_out/expression_pattern_topgenes.png",width=28,height=25)
 ```

@@ -247,4 +247,109 @@ ggsave(p.DEGs2, file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_o
 ```
 
 
+```{r}
+source("https://bioconductor.org/biocLite.R")
+biocLite("DESeq2")
+library("DESeq2")
+#library("lattice")
+#library(tximport)
+#library(readr)
+#library(gplots)
+#library(RColorBrewer)
+#library(matrixStats)
+dds.dge <- DESeqDataSetFromMatrix(countData = round(counts_Davis_small), colData = samples_Davis_small, design = ~genotype+trt)
+vsd.dge <- varianceStabilizingTransformation(dds.dge)
+vstMat.dge <- assay(vsd.dge)
+colnames(vstMat.dge) <- colnames(counts_Davis_small)
+```
+# clustering to check sample seperation 
 
+```{r}
+#install.packages("ggdendro")
+library(ggdendro)
+#install.packages("pvclust")
+library(pvclust)
+hc.mds.dge <- hclust(dist(t(vstMat.dge[1:1000,])))
+plot(hc.mds.dge)
+rect.hclust(hc.mds.dge, k = 4, border = "red")
+
+ggdata <- dendro_data(as.dendrogram(hc.mds.dge))
+ggdata$labels$gt <- gsub("(R|S|F|L)(2|3|6)","\\2" , ggdata$labels$label) 
+ggdata$labels$trt <- gsub("(R|S|F|L)(2|3|6)","\\1", ggdata$labels$label)
+
+ggdata$labels$group <- paste(ggdata$labels$gt, ggdata$labels$trt, sep = "_")
+ggdata$labels
+
+# start ggplot here 
+library(ggplot2)
+p2 <- ggplot(data = segment(ggdata))
+p2 <- p2 + geom_segment(aes(x=x, y=y, xend=xend, yend=yend)) + theme_dendro()
+p2 <- p2 + geom_text(data = label(ggdata), aes(x = x, y = y, label = label, hjust=0, color=group)) + coord_flip() + scale_y_reverse(expand=c(0.2, 0))
+p2
+ggsave("~/Ferula_RNAseq_Analysis/Kallisto_out/clustering_vst.png", width = 13, height = 25)
+```
+# 1) trasform your dataset from wide to long format
+
+```{r}
+library(reshape2)
+vstMat.dge.melt <- melt(vstMat.dge)
+head(vstMat.dge.melt)
+tail(vstMat.dge.melt)
+dim(vstMat.nolow.1.melt) # something wrong? 
+```
+# 2) get description for each factor of your VST normalized read count
+
+```{r}
+vstMat.dge.melt$genotype<-factor(gsub("(R|S|F|L)(2|3|6)","\\2",vstMat.dge.melt$Var2))
+vstMat.dge.melt$trt<-factor(gsub("(R|S|F|L)(2|3|6)","\\1",vstMat.dge.melt$Var2))
+```
+
+# 3) get the mean across biological replicate
+
+```{r}
+vstMat.dge.melt.mean <- as.data.frame(tapply(vstMat.dge.melt$value,list(vstMat.dge.melt$Var1,vstMat.dge.melt$genotype,vstMat.dge.melt$trt),mean)) #this way, we get the mean expression values from 3 biological reps for each condition 
+save(vstMat.dge.melt.mean, file = "~/Ferula_RNAseq_Analysis/Kallisto_out/vstMat.dge.melt.mean.Rdata")
+head(vstMat.dge.melt.mean) 
+```
+
+# 4) calculate the fold change 
+
+```{r}
+vstMat.dge.log2response.FvsR<-as.data.frame(vstMat.dge.melt.mean[,grep("F",colnames(vstMat.dge.melt.mean))] - vstMat.dge.melt.mean[,grep("R",colnames(vstMat.dge.melt.mean))]) # F/R (this is log2 fold change)
+vstMat.log2response.FvsR<-sapply(vstMat.dge.log2response.FvsR,as.numeric) # as numeric
+
+vstMat.dge.log2response.SvsR<-as.data.frame(vstMat.dge.melt.mean[,grep("S",colnames(vstMat.dge.melt.mean))] - vstMat.dge.melt.mean[,grep("R",colnames(vstMat.dge.melt.mean))]) # S/R (this is log2 fold change)
+vstMat.log2response.SvsR <-sapply(vstMat.dge.log2response.SvsR,as.numeric) # as numeric
+
+vstMat.dge.log2response.LvsR<-as.data.frame(vstMat.dge.melt.mean[,grep("L",colnames(vstMat.dge.melt.mean))] - vstMat.dge.melt.mean[,grep("R",colnames(vstMat.dge.melt.mean))]) # L/R (this is log2 fold change)
+vstMat.log2response.LvsR <-sapply(vstMat.dge.log2response.LvsR,as.numeric) # as numeric
+
+rownames(vstMat.dge.log2response.FvsR) <- rownames(vstMat.dge.melt.mean)
+head(vstMat.dge.log2response.FvsR)
+colnames(vstMat.dge.log2response.FvsR) <- sub(".F","",colnames(vstMat.dge.log2response.FvsR)) # remove "F" from col names
+save(vstMat.dge.log2response.FvsR,file="~/Ferula_RNAseq_Analysis/Kallisto_out/vstMat.dge.log2response.FvsR.Rdata")
+
+rownames(vstMat.dge.log2response.SvsR) <- rownames(vstMat.dge.melt.mean)
+head(vstMat.dge.log2response.SvsR)
+colnames(vstMat.dge.log2response.SvsR) <- sub(".S","",colnames(vstMat.dge.log2response.FvsR)) # remove "S" from col names
+save(vstMat.dge.log2response.SvsR,file="~/Ferula_RNAseq_Analysis/Kallisto_out/vstMat.dge.log2response.SvsR.Rdata")
+
+rownames(vstMat.dge.log2response.LvsR) <- rownames(vstMat.dge.melt.mean)
+head(vstMat.dge.log2response.LvsR)
+colnames(vstMat.dge.log2response.LvsR) <- sub(".L","",colnames(vstMat.dge.log2response.FvsR)) # remove "L" from col names
+save(vstMat.dge.log2response.LvsR,file="~/Ferula_RNAseq_Analysis/Kallisto_out/vstMat.dge.log2response.LvsR.Rdata")
+```
+
+```{r}
+vstMat.dge.log2response.FvsR.melt <- melt(vstMat.dge.log2response.FvsR)
+head(vstMat.dge.log2response.FvsR.melt)
+class(vstMat.dge.log2response.FvsR.melt$Var2)
+vstMat.dge.log2response.FvsR.melt
+vstMat.dge.log2response.FvsR.melt$Var2 <-rownames(vstMat.dge.melt.mean)
+unique(vstMat.dge.log2response.FvsR.melt$Var2)
+
+vstMat.dge.log2response.FvsR.melt$gt <- gsub("(R|S|F|L)(2|3|6)","\\2", vstMat.dge.log2response.FvsR.melt$Var2)
+
+vstMat.dge.log2response.FvsR.melt$trt <- gsub("(R|S|F|L)(2|3|6)","\\1", vstMat.dge.log2response.FvsR.melt$Var2)
+                                           `
+```

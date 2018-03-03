@@ -1,0 +1,73 @@
+---
+title: "Goseq_Analysis"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Goseq for Drap_Oases_Plant6 for IPS result
+#all the scripts for running IPS is on interproscan.sh on ~/interproscan/interproscan-5.26-65.0 path
+
+```{r}
+setwd("~/Ferula_RNAseq_Analysis/Goseq_Analysis")
+```
+
+# 1) Command Line Pre-melt Steps
+
+```{r}
+# Combined tsv files from /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/interproscan/interproscan_result/Drap_Oases 
+#cat Drap_Oases_Plant6.part-*.fasta.dir/Drap_Oases_Plant6.part-*.fasta.tsv >> Drap_Oases_Plant6_interproscan.tsv 
+#cat Drap_Oases_Plant6_interproscan.tsv | cut -f1,12-50 > Drap_Oases_Plant6_All_ID.tsv
+# cat Drap_Oases_Plant6_interproscan.tsv | awk '{print $1,$NF}' | sed '/GO:/!d' | sort | uniq > Drap_Oases_Plant6_GO_rough # Getting Transcript ID and GO terms
+#cat Drap_Oases_Plant6_interproscan.tsv | awk '{print $1,$NF}' | sed '/GO:/!d' | sort | uniq | wc
+#23484   46968 1312015
+#cat Drap_Oases_Plant6_GO_rough | sed 's/|/ /g' > Drap_Oases_Plant6_GO_rough2
+# cat Drap_Oases_Plant6_GO_rough | awk 'BEGIN{FS=" "}{print NF}' | sort | uniq -c # Finding lines with X fields (Max fields: 8)
+#  10712 2
+#    7358 3
+#   3560 4
+#   1586 5
+#    235 6
+#     32 7
+#      1 8
+# cat Drap_Oases_Plant6_GO_rough2 | sed ‘s/ /,/g’ > Drap_Oases_Plant6_GO_R # Changing field separator to comma
+#nano Drap_Oases_Plant6_GO_R Added ,filler,filler,filler,filler,filler,filler # (so there are 8 columns/fields in line 1) Fixing column issues with R import
+
+```
+
+#2) Melting
+
+```{r}
+library(tidyverse)
+library(reshape2)
+Drap_Oases_Plant6_interpro_rough <- read.csv("~/interproscan/interproscan_result/Drap_Oases/Drap_Oases_Plant6_GO_R", ,header=FALSE, fill=TRUE)
+dim(Drap_Oases_Plant6_interpro_rough)
+#[1] 23484     9
+Drap_Oases_Plant6_interpro_melt <- melt(Drap_Oases_Plant6_interpro_rough, id.vars = "V1", measure.vars=c("V2","V3","V4","V5","V6","V7","V8"))
+write.table(Drap_Oases_Plant6_interpro_melt,file="/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6_interproscan_melt", quote=FALSE,row.names=FALSE)
+```
+
+# 3) Command Line Post Melt Formatting
+
+```{r}
+# cat Drap_Oases_Plant6_interproscan_melt | grep -v "V1 variable value" | awk '{print $1,$3}' | sort | uniq > Drap_Oases_Plant6_interproscan_edit # Removing leftover melt column
+# cat Drap_Oases_Plant6_interproscan_edit | sed 's/ GO:/_GO:/g' | sed 's/ filler//g' | sed 's/ //g'> Drap_Oases_Plant6_interproscan_sep #Adding _ Separator for Removal of Extra ID Number
+#cat Ae_interproscan_sep | awk -F_ '{$3="";print}' | sed 's/script /script_/g' | sed 's/  / /g' > Ae_interproscan_sep_edit # Removal of Extra ID number
+#The top script for my gene ID, becuase top do not work for me
+#cat Drap_Oases_Plant6_interproscan_sep | sed "s/_GO/\tGO/" | sed "s/_1_/\t/" | sed "s/_2_/\t/" | sed "s/_3_/\t/" | sed "s/_6_/\t/" | sed "s/_5_/\t/" | sed "s/_4_/\t/" | cut -f1,3 | sed "s/_3\t/\t/" | sed "s/_4\t/\t/" | sed "s/_16\t/\t/" | sed "s/_2\t/\t/" | sed "s/_5\t/\t/g" | sed "s/_9\t/\t/" |  sed "s/_7\t/\t/" |  sed "s/_6\t/\t/" | sed "s/_10\t/\t/" | sed "s/_8\t/\t/" | sed "s/_12\t/\t/" | sed "s/_28\t/\t/" | sed "s/_22\t/\t/" | sed "s/_14\t/\t/" | sed "s/_63\t/\t/" | cat Drap_Oases_Plant6_interproscan_sep | sed "s/_GO/\tGO/" | sed "s/_1_/\t/" | sed "s/_2_/\t/" | sed "s/_3_/\t/" | sed "s/_6_/\t/" | sed "s/_5_/\t/" | sed "s/_4_/\t/" | cut -f1,3 | sed "s/_3\t/\t/" | sed "s/_4\t/\t/" | sed "s/_16\t/\t/" | sed "s/_2\t/\t/" | sed "s/_5\t/\t/g" | sed "s/_9\t/\t/" |  sed "s/_7\t/\t/" |  sed "s/_6\t/\t/" | sed "s/_10\t/\t/" | sed "s/_8\t/\t/" | sed "s/_12\t/\t/" | sed "s/_28\t/\t/" | sed "s/_22\t/\t/" | sed "s/_14\t/\t/" | sed "s/_63\t/\t/" | sed "s/_15\t/\t/" |grep GO > Drap_Oases_Plant6_interproscan_sep_edit
+# cat Ae_interproscan_sep_edit | sort | uniq > Ae_interproscan_sep_edit_final # Removing duplicate GOs for the same transcript
+
+# cat Ae_interproscan_sep_edit | sort | uniq > Ae_interproscan_sep_edit_final # Removing duplicate GOs for the same transcript
+#cat Drap_Oases_Plant6_interproscan_sep_edit | sort | uniq > Drap_Oases_Plant6_interproscan_sep_edit_final
+# cat Drap_Oases_Plant6_interproscan_sep_edit_final | grep "GO" > Drap_Oases_Plant6_GOseq # Removing rows with no GO terms, it is same as previous, becuase I do remove no GO before this command
+
+
+
+```
+
+# For GO Files
+# Da-Aev

@@ -8,7 +8,6 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
 #Goseq for Drap_Oases_Plant6 for IPS result
 #all the scripts for running IPS is on interproscan.sh on ~/interproscan/interproscan-5.26-65.0 path
 
@@ -56,18 +55,140 @@ write.table(Drap_Oases_Plant6_interpro_melt,file="/Network/Servers/avalanche.plb
 ```{r}
 # cat Drap_Oases_Plant6_interproscan_melt | grep -v "V1 variable value" | awk '{print $1,$3}' | sort | uniq > Drap_Oases_Plant6_interproscan_edit # Removing leftover melt column
 # cat Drap_Oases_Plant6_interproscan_edit | sed 's/ GO:/_GO:/g' | sed 's/ filler//g' | sed 's/ //g'> Drap_Oases_Plant6_interproscan_sep #Adding _ Separator for Removal of Extra ID Number
-#cat Ae_interproscan_sep | awk -F_ '{$3="";print}' | sed 's/script /script_/g' | sed 's/  / /g' > Ae_interproscan_sep_edit # Removal of Extra ID number
-#The top script for my gene ID, becuase top do not work for me
-#cat Drap_Oases_Plant6_interproscan_sep | sed "s/_GO/\tGO/" | sed "s/_1_/\t/" | sed "s/_2_/\t/" | sed "s/_3_/\t/" | sed "s/_6_/\t/" | sed "s/_5_/\t/" | sed "s/_4_/\t/" | cut -f1,3 | sed "s/_3\t/\t/" | sed "s/_4\t/\t/" | sed "s/_16\t/\t/" | sed "s/_2\t/\t/" | sed "s/_5\t/\t/g" | sed "s/_9\t/\t/" |  sed "s/_7\t/\t/" |  sed "s/_6\t/\t/" | sed "s/_10\t/\t/" | sed "s/_8\t/\t/" | sed "s/_12\t/\t/" | sed "s/_28\t/\t/" | sed "s/_22\t/\t/" | sed "s/_14\t/\t/" | sed "s/_63\t/\t/" | cat Drap_Oases_Plant6_interproscan_sep | sed "s/_GO/\tGO/" | sed "s/_1_/\t/" | sed "s/_2_/\t/" | sed "s/_3_/\t/" | sed "s/_6_/\t/" | sed "s/_5_/\t/" | sed "s/_4_/\t/" | cut -f1,3 | sed "s/_3\t/\t/" | sed "s/_4\t/\t/" | sed "s/_16\t/\t/" | sed "s/_2\t/\t/" | sed "s/_5\t/\t/g" | sed "s/_9\t/\t/" |  sed "s/_7\t/\t/" |  sed "s/_6\t/\t/" | sed "s/_10\t/\t/" | sed "s/_8\t/\t/" | sed "s/_12\t/\t/" | sed "s/_28\t/\t/" | sed "s/_22\t/\t/" | sed "s/_14\t/\t/" | sed "s/_63\t/\t/" | sed "s/_15\t/\t/" |grep GO > Drap_Oases_Plant6_interproscan_sep_edit
-# cat Ae_interproscan_sep_edit | sort | uniq > Ae_interproscan_sep_edit_final # Removing duplicate GOs for the same transcript
+#cat Ae_interproscan_sep | awk -F_ '{$3="";print}' | sed 's/script /script_/g' | sed 's/  / /g' > Ae_interproscan_sep_edit # Removal of all Extra ID number
+#cat Drap_Oases_Plant6_interproscan_sep |  sed "s/_GO/\tGO/" | grep GO | sed "s/_.\t\|_..\t\|_...\t/\t/" |  sed "s/_.\t\|_..\t\|_...\t/\t/" | sed "s/_.\t\|_..\t\|_...\t/\t/" > Drap_Oases_Plant6_interproscan_sep_edit #wc 41361
+#The top script for my gene ID, becuase top do not work for me, with this remove the Extra ID number that added by running IPS (use this for downstream analysis)
+#cat Drap_Oases_Plant6_interproscan_sep |  sed "s/_GO/\tGO/" | grep GO | sed "s/_.\t\|_..\t/\t/" > Drap_Oases_Plant6_interproscan_sep_edit #wc 41361
+# cat Drap_Oases_Plant6_interproscan_sep_edit | sort | uniq > Drap_Oases_Plant6_interproscan_sep_edit_final #wc 39736 # Removing duplicate GOs for the same transcript
+# cat Drap_Oases_Plant6_interproscan_sep_edit_final | grep "GO" > Drap_Oases_Plant6_GOseq #39736 Removing rows with no GO terms, it is same as previous, becuase I do remove no GO before this command
+```
 
-# cat Ae_interproscan_sep_edit | sort | uniq > Ae_interproscan_sep_edit_final # Removing duplicate GOs for the same transcript
-#cat Drap_Oases_Plant6_interproscan_sep_edit | sort | uniq > Drap_Oases_Plant6_interproscan_sep_edit_final
-# cat Drap_Oases_Plant6_interproscan_sep_edit_final | grep "GO" > Drap_Oases_Plant6_GOseq # Removing rows with no GO terms, it is same as previous, becuase I do remove no GO before this command
+#For Transcript Files
 
+```{r}
+#cat Drap_Oases_Plant6_GOseq | awk '{print $1}' | sort | uniq > Drap_Oases_Plant6_ID # wc  19120 
+```
+#BnRNAseq for GO Enrichment (function)
 
+```{r}
+#1) GO annotaion 
+library(ShortRead);library(goseq);library(GO.db);library("annotate");
+#for ggplot heatmap library(heatmap)
+library(WGCNA);library(ggplot2);library(reshape2);library(scales); library (plyr)
+Drap_Oases_Plant6.Bn.cdna<-readDNAStringSet("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6_No_Whitespace.fasta")
+head(Drap_Oases_Plant6.Bn.cdna)
+Drap_Oases_Plant6.bias<-nchar(Drap_Oases_Plant6.Bn.cdna) #60134
+names(Drap_Oases_Plant6.bias)<-names(Drap_Oases_Plant6.Bn.cdna)
+length(Drap_Oases_Plant6.bias) # 60134
+# # bias.data vector must have the same length as DEgenes vector!
+#convert to list (onetime procedure)
+Drap_Oases_Plant6.Bngo<-read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6_GOseq",header=FALSE) # read Br_GO.txt in excel and save as csv
+dim(Drap_Oases_Plant6.Bngo) #39736  2
+head(head(Drap_Oases_Plant6.Bngo))
+tail(head(Drap_Oases_Plant6.Bngo))
+Drap_Oases_Plant6.Bngo.list <- tapply(as.character(Drap_Oases_Plant6.Bngo$V2),Drap_Oases_Plant6.Bngo$V1,c)
+head(Drap_Oases_Plant6.Bngo.list)
+save(Drap_Oases_Plant6.Bngo.list,file="/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6.Bngo.list.Rdata") # this does not work ub goseq after updating R
+# # Using manually entered categories.
+# # Calculating the p-values...
+# # 'select()' returned 1:1 mapping between keys and columns
+Drap_Oases_Plant6.Bngo.DF<-as.data.frame(Drap_Oases_Plant6.Bngo.list)
+dim(Drap_Oases_Plant6.Bngo.DF) #19120 1
+Drap_Oases_Plant6.Bngo.DF$gene<-rownames(Drap_Oases_Plant6.Bngo.DF)
+#Drap_Oases_Plant6.Bngo.DF[1:10,]
+do.call(rbind.data.frame, Drap_Oases_Plant6.Bngo.list)
+Drap_Oases_Plant6.Bngo.DF2<-do.call(rbind.data.frame,Drap_Oases_Plant6.Bngo.list) # ????
 
 ```
 
-# For GO Files
-# Da-Aev
+```{r}
+load("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6.Bngo.list.Rdata")
+#genelist could be any interested genes list (DEgenes list or all genes)
+#first run for all genes
+Drap_Oases_Plant6_ID<-read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6_ID",header=FALSE)
+genelist <- Drap_Oases_Plant6_ID$V1 
+#genelist2 <- gsub("([[:print:]]+)(_)([[:digit:]]+)", "\\1", genelist) # just remove the last number after "_"
+Drap_Oases_Plant6.GOseq.Bn.ORA <-function(genelist,padjust=0.05,ontology="BP") { #return GO enrichment table, padjus, padjust=0.05
+#remove additional ID after running IPS
+TF<-(names(Drap_Oases_Plant6.bias) %in% genelist)*1
+names(TF)<-names(Drap_Oases_Plant6.bias)
+pwf<-nullp(TF,bias.data=Drap_Oases_Plant6.bias)
+  GO.pval <- goseq(pwf,gene2cat=Drap_Oases_Plant6.Bngo.list,use_genes_without_cat=TRUE) 
+  if(ontology=="BP") {
+    GO.pval2<-subset(GO.pval,ontology=="BP")
+  } else if(ontology=="CC") {
+    GO.pval2<-subset(GO.pval,ontology=="CC")
+  } else {
+    GO.pval2<-subset(GO.pval,ontology=="MF")
+  }
+
+GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,method="BH")
+  if(GO.pval2$over_represented_padjust[1]>padjust) stop("no enriched GO")
+  else {
+    enriched.GO<-GO.pval2[GO.pval2$over_represented_padjust<padjust,]
+    print("enriched.GO is")
+    print(enriched.GO)
+
+    ## write Term and Definition
+    for(i in 1:dim(enriched.GO)[1]) {
+      enriched.GO$Term[i]<-Term(GOTERM[[enriched.GO[i,"category"]]])
+      enriched.GO$Definition[i]<-Definition(GOTERM[[enriched.GO[i,"category"]]])
+    }
+    return(enriched.GO)
+  }
+}
+```
+#BnRNAseq for GO Enrichment (run)
+
+```{r}
+library(goseq)
+Drap_Oases_Plant6.DEgene.GO.ORA.gt <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist)
+class(Drap_Oases_Plant6.DEgene.GO.ORA.gt)
+Drap_Oases_Plant6.DEgene.GO.ORA.gt$term
+write.table(Drap_Oases_Plant6.DEgene.GO.ORA.gt[,c(1,2,6)],row.names=FALSE,file="~/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6.DEgene.GO.ORA.gt", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.DEgene.GO.ORA.gt[,1:2],row.names=FALSE,file="~/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6.DEgene.GO.ORA.gt.revigo", quote = FALSE,col.names = FALSE)
+```
+
+*GO Enrichment Heatmap (visualization)
+```{r}
+# 1) Loading Necessary Functions
+library(WGCNA);library(ggplot2);library(reshape2);library(scales); library (plyr)
+#draw heatmap for gt & gt:tissue effect genes 
+Ae.gt <- Ae.DEgene.GO.ORA.gt[,c("Term", "over_represented_padjust")] 
+# Ol.gt <- Ol.DEgene.GO.ORA.gt[,c("Term", "over_represented_padjust")]
+Ae.gt_Ol.gt <- merge(Ae.gt, Ol.gt, by="Term", all=TRUE)
+names(Ae.gt_Ol.gt)[c(2:3)] <- c("Da_Ae", "Da_Ol")
+Ae.gt_Ol.gt.melt <- melt(Ae.gt_Ol.gt)
+Ae.gt_Ol.gt.melt
+Ae.gt_Ol.gt.melt$logPvalue <- -log10(Ae.gt_Ol.gt.melt$value)
+```
+### test 
+Drap_Oases_Plant6.GOseq.ID$V1 %>% head()
+genes <- Drap_Oases_Plant6.GOseq.ID$V1
+
+```
+
+```{r}
+expressed.genes <- read.delim("Goseq_Analysis/genelist",as.is=TRUE)
+head(expressed.genes)
+names(expressed.genes) <- "GeneID"
+gene.lengths <- read.table("Goseq_Analysis/genes.length.txt2",as.is=TRUE)
+head(gene.lengths)
+summary(gene.lengths)
+#we need to reduce the gene.length data to only contain entries for those genes in our expressed.genes set.  We also need this as a vector
+gene.lengths.vector <- gene.lengths$V2[gene.lengths$V1 %in% expressed.genes$GeneID]
+names(gene.lengths.vector) <- gene.lengths$V1[gene.lengths$V1 %in% expressed.genes$GeneID]
+head(gene.lengths.vector)
+expressed.genes.match <- expressed.genes[expressed.genes$GeneID %in% names(gene.lengths.vector),]
+go.list <- strsplit(Drap_Oases_Plant6.BngoD$,split=",")
+names(go.list) <- go.terms$GeneID
+head(go.list)
+nullp.result <- nullp(DEgenes = expressed.genes.match,bias.data = gene.lengths.vector)
+
+```
+
+```{r}
+
+```
+
+

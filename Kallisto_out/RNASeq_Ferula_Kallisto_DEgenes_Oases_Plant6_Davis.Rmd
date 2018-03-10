@@ -179,7 +179,84 @@ dim(DEgenes2) #3823  7
 colnames(DEgenes2)
 head(DEgenes2)
 write.table(DEgenes2, "~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_DEgenes2ID.txt", col.names = T, row.names = T)
+
+#To do pairwise comparison(I did before but this one for checking again and use them for GO seq analysis)
+#Flower vs Root
+#design1 <- model.matrix(~genotype+trt, data=samples_Davis_small)
+lrt.trt.FvsR <- glmLRT(dge.fit, coef = "trtF")
+topTags(lrt.trt.FvsR)
+summary(dge.lrt.trt.FvsR <- decideTestsDGE(lrt.trt.FvsR, p=0.05))
+DEgene.FvsR<- topTags(lrt.trt.FvsR,n = Inf)$table[topTags(lrt.trt.FvsR,n = Inf)$table$FDR<0.05,]
+#   trtF
+#-1   153
+#0  27116
+#1  425
+DEgene.FvsR %>% dim() #578  5
+#Stem vs Root
+lrt.trt.SvsR <- glmLRT(dge.fit, coef = "trtS")
+topTags(lrt.trt.SvsR)
+summary(dge.lrt.trt.SvsR <- decideTestsDGE(lrt.trt.SvsR, p=0.05))
+DEgene.SvsR<- topTags(lrt.trt.SvsR,n = Inf)$table[topTags(lrt.trt.SvsR,n = Inf)$table$FDR<0.05,]
+#   trtS
+#-1   3
+#0  27689
+#1  2
+DEgene.SvsR %>% dim() #5  5
+#Leaf vs Root
+lrt.trt.LvsR <- glmLRT(dge.fit, coef = "trtL")
+topTags(lrt.trt.LvsR)
+summary(dge.lrt.trt.LvsR <- decideTestsDGE(lrt.trt.LvsR, p=0.05))
+DEgene.LvsR<- topTags(lrt.trt.LvsR,n = Inf)$table[topTags(lrt.trt.LvsR,n = Inf)$table$FDR<0.05,]
+#   trtS
+#-1   2794
+#0  23915
+#1  985
+DEgene.LvsR %>% dim() #3779  5
+
+#Flower vs Stem
+#change the ref from root to stem
+samples_Davis_small$trt <- relevel(samples_Davis_small$trt,ref="S")
+design1 <- model.matrix(~genotype+trt, data=samples_Davis_small)
+#samples_Davis_small$genotype <- relevel(samples_Davis_small$genotype,ref="3")
+dge.fit <- glmFit(dge, design1)
+lrt.trt.FvsS <- glmLRT(dge.fit, coef = "trtF")
+topTags(lrt.trt.FvsS)
+summary(dge.lrt.trt.FvsS <- decideTestsDGE(lrt.trt.FvsS, p=0.05))
+DEgene.FvsS<- topTags(lrt.trt.FvsS,n = Inf)$table[topTags(lrt.trt.FvsS,n = Inf)$table$FDR<0.05,]
+#   trtF
+#-1   80
+#0  27201
+#1  413
+DEgene.FvsS %>% dim() #493  5
+
+#LvsS
+lrt.trt.LvsS <- glmLRT(dge.fit, coef = "trtL")
+topTags(lrt.trt.LvsS)
+summary(dge.lrt.trt.LvsS <- decideTestsDGE(lrt.trt.LvsS, p=0.05))
+DEgene.LvsS<- topTags(lrt.trt.LvsS,n = Inf)$table[topTags(lrt.trt.LvsS,n = Inf)$table$FDR<0.05,]
+#   trtL
+#-1   5
+#0  27683
+#1  6
+DEgene.LvsS %>% dim() #11  5
+
+# F vs L
+#change the ref from root to stem
+samples_Davis_small$trt <- relevel(samples_Davis_small$trt,ref="L")
+design1 <- model.matrix(~genotype+trt, data=samples_Davis_small)
+#samples_Davis_small$genotype <- relevel(samples_Davis_small$genotype,ref="3")
+dge.fit <- glmFit(dge, design1)
+lrt.trt.FvsL <- glmLRT(dge.fit, coef = "trtF")
+topTags(lrt.trt.FvsL)
+summary(dge.lrt.trt.FvsL <- decideTestsDGE(lrt.trt.FvsL, p=0.05))
+DEgene.FvsL<- topTags(lrt.trt.FvsL,n = Inf)$table[topTags(lrt.trt.FvsL,n = Inf)$table$FDR<0.05,]
+#   trtF
+#-1   65
+#0  26987
+#1  642
+DEgene.FvsL %>% dim() #707  5
 ```
+
 
 ##To find genes that are differentially expressed in trt S, F & L vs R seperately
 

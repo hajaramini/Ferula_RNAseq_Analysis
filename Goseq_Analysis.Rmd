@@ -1454,21 +1454,40 @@ ggsave("~/Ferula_RNAseq_Analysis/Goseq_Analysis/FvsR_LvsR_FvsL_FvsS.heatmap1.png
 
 
 ```{r}
-FvsR_LvsR.gt <- merge(Drap_Oases_Plant6.gt.FvsR, Drap_Oases_Plant6.gt.LvsR, by="Term", all=TRUE)
-names(FvsR_LvsR.gt)[c(2:3)] <- c("FvsR", "LvsR")
-FvsR_LvsR_FvsL.gt <- merge(FvsR_LvsR.gt,Drap_Oases_Plant6.gt.FvsL, by="Term",all=TRUE)
-names(FvsR_LvsR_FvsL.gt)[4] <- "FvsL"
-FvsR_LvsR_FvsL_FvsS.gt <- merge(FvsR_LvsR_FvsL.gt,Drap_Oases_Plant6.gt.FvsS, by="Term",all=TRUE)
-names(FvsR_LvsR_FvsL_FvsS.gt)[5] <- "FvsS"
-FvsR_LvsR_FvsL_FvsS.gt.melt <- melt(FvsR_LvsR_FvsL_FvsS.gt)
-FvsR_LvsR_FvsL_FvsS.gt.melt 
-FvsR_LvsR_FvsL_FvsS.gt.melt $logPvalue <- -log10(FvsR_LvsR_FvsL_FvsS.gt.melt $value)
+FvsR_LvsR.gt.CC <- merge(Drap_Oases_Plant6.gt.FvsR.CC, Drap_Oases_Plant6.gt.LvsR.CC, by="Term", all=TRUE)
+names(FvsR_LvsR.gt.CC)[c(2:3)] <- c("FvsR", "LvsR")
+FvsR_LvsR_FvsL.gt.CC <- merge(FvsR_LvsR.gt.CC,Drap_Oases_Plant6.gt.FvsL.CC, by="Term",all=TRUE)
+names(FvsR_LvsR_FvsL.gt.CC)[4] <- "FvsL"
+FvsR_LvsR_FvsL_FvsS.gt.CC <- merge(FvsR_LvsR_FvsL.gt.CC,Drap_Oases_Plant6.gt.FvsS.CC, by="Term",all=TRUE)
+names(FvsR_LvsR_FvsL_FvsS.gt.CC)[5] <- "FvsS"
+FvsR_LvsR_FvsL_FvsS.gt.melt.CC <- melt(FvsR_LvsR_FvsL_FvsS.gt.CC)
+FvsR_LvsR_FvsL_FvsS.gt.melt.CC 
+FvsR_LvsR_FvsL_FvsS.gt.melt.CC$logPvalue <- -log10(FvsR_LvsR_FvsL_FvsS.gt.melt.CC$value)
 
 # 2) Plot 
-FvsR_LvsR_FvsL_FvsS.heatmap1 <- ggplot(data = FvsR_LvsR_FvsL_FvsS.gt.melt)
-FvsR_LvsR_FvsL_FvsS.heatmap1 <- FvsR_LvsR_FvsL_FvsS.heatmap1 + geom_tile(color = "black", aes(x = factor(variable), y = Term, fill=logPvalue)) + scale_fill_gradient2(low=muted("green"), high=muted("magenta")) 
-FvsR_LvsR_FvsL_FvsS.heatmap1 <- FvsR_LvsR_FvsL_FvsS.heatmap1 + labs(y = "GO Term", x="Genotype", title="Ferula assafoetida Novel Genes GO Heatmap") 
-FvsR_LvsR_FvsL_FvsS.heatmap1 
-ggsave("~/Ferula_RNAseq_Analysis/Goseq_Analysis/FvsR_LvsR_FvsL_FvsS.heatmap1.png", width = 13, height = 25)
+FvsR_LvsR_FvsL_FvsS.heatmap1.CC <- ggplot(data = FvsR_LvsR_FvsL_FvsS.gt.melt.CC)
+FvsR_LvsR_FvsL_FvsS.heatmap1.CC <- FvsR_LvsR_FvsL_FvsS.heatmap1.CC + geom_tile(color = "black", aes(x = factor(variable), y = Term, fill=logPvalue)) + scale_fill_gradient2(low=muted("green"), high=muted("magenta")) 
+FvsR_LvsR_FvsL_FvsS.heatmap1.CC <- FvsR_LvsR_FvsL_FvsS.heatmap1.CC + labs(y = "GO Term", x="Genotype", title="Ferula assafoetida Novel Genes GO Heatmap") 
+FvsR_LvsR_FvsL_FvsS.heatmap1.CC 
+ggsave("~/Ferula_RNAseq_Analysis/Goseq_Analysis/FvsR_LvsR_FvsL_FvsS.heatmap1.CC.png", width = 13, height = 25)
+```
+
+```{r}
+FvsR_LvsR.gt.MF <- merge(Drap_Oases_Plant6.gt.FvsR.MF, Drap_Oases_Plant6.gt.LvsR.MF, by="Term", all=TRUE)
+names(FvsR_LvsR.gt.MF)[c(2:3)] <- c("FvsR", "LvsR")
+FvsR_LvsR_FvsL.gt.MF <- merge(FvsR_LvsR.gt.MF,Drap_Oases_Plant6.gt.FvsL.MF, by="Term",all=TRUE)
+names(FvsR_LvsR_FvsL.gt.MF)[4] <- "FvsL"
+FvsR_LvsR_FvsL_FvsS.gt.MF <- merge(FvsR_LvsR_FvsL.gt.MF,Drap_Oases_Plant6.gt.FvsS.MF, by="Term",all=TRUE)
+names(FvsR_LvsR_FvsL_FvsS.gt.MF)[5] <- "FvsS"
+FvsR_LvsR_FvsL_FvsS.gt.melt.MF <- melt(FvsR_LvsR_FvsL_FvsS.gt.MF)
+FvsR_LvsR_FvsL_FvsS.gt.melt.MF 
+FvsR_LvsR_FvsL_FvsS.gt.melt.MF$logPvalue <- -log10(FvsR_LvsR_FvsL_FvsS.gt.melt.MF$value)
+
+# 2) Plot 
+FvsR_LvsR_FvsL_FvsS.heatmap1.MF <- ggplot(data = FvsR_LvsR_FvsL_FvsS.gt.melt.MF)
+FvsR_LvsR_FvsL_FvsS.heatmap1.MF <- FvsR_LvsR_FvsL_FvsS.heatmap1.MF + geom_tile(color = "black", aes(x = factor(variable), y = Term, fill=logPvalue)) + scale_fill_gradient2(low=muted("green"), high=muted("magenta")) 
+FvsR_LvsR_FvsL_FvsS.heatmap1.MF <- FvsR_LvsR_FvsL_FvsS.heatmap1.MF + labs(y = "GO Term", x="Genotype", title="Ferula assafoetida Novel Genes GO Heatmap") 
+FvsR_LvsR_FvsL_FvsS.heatmap1.MF 
+ggsave("~/Ferula_RNAseq_Analysis/Goseq_Analysis/FvsR_LvsR_FvsL_FvsS.heatmap1.MF.png", width = 13, height = 25)
 ```
 

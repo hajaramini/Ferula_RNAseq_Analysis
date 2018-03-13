@@ -1432,6 +1432,7 @@ Drap_Oases_Plant6.heatmap.FvsL.MF <- Drap_Oases_Plant6.heatmap.FvsL.MF + labs(y 
 Drap_Oases_Plant6.heatmap.FvsL.MF 
 ggsave("~/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6.heatmap.FvsL.MF.png", width = 13, height = 25)
 ```
+#merge all pairwise comparision in to one figure
 
 ```{r}
 FvsR_LvsR.gt <- merge(Drap_Oases_Plant6.gt.FvsR, Drap_Oases_Plant6.gt.LvsR, by="Term", all=TRUE)
@@ -1452,6 +1453,7 @@ FvsR_LvsR_FvsL_FvsS.heatmap1
 ggsave("~/Ferula_RNAseq_Analysis/Goseq_Analysis/FvsR_LvsR_FvsL_FvsS.heatmap1.png", width = 13, height = 25)
 ```
 
+#merge all pairwise comparision in to one figure for CC
 
 ```{r}
 FvsR_LvsR.gt.CC <- merge(Drap_Oases_Plant6.gt.FvsR.CC, Drap_Oases_Plant6.gt.LvsR.CC, by="Term", all=TRUE)
@@ -1471,6 +1473,7 @@ FvsR_LvsR_FvsL_FvsS.heatmap1.CC <- FvsR_LvsR_FvsL_FvsS.heatmap1.CC + labs(y = "G
 FvsR_LvsR_FvsL_FvsS.heatmap1.CC 
 ggsave("~/Ferula_RNAseq_Analysis/Goseq_Analysis/FvsR_LvsR_FvsL_FvsS.heatmap1.CC.png", width = 13, height = 25)
 ```
+#merge all pairwise comparision in to one figure for MF
 
 ```{r}
 FvsR_LvsR.gt.MF <- merge(Drap_Oases_Plant6.gt.FvsR.MF, Drap_Oases_Plant6.gt.LvsR.MF, by="Term", all=TRUE)
@@ -1489,5 +1492,188 @@ FvsR_LvsR_FvsL_FvsS.heatmap1.MF <- FvsR_LvsR_FvsL_FvsS.heatmap1.MF + geom_tile(c
 FvsR_LvsR_FvsL_FvsS.heatmap1.MF <- FvsR_LvsR_FvsL_FvsS.heatmap1.MF + labs(y = "GO Term", x="Genotype", title="Ferula assafoetida Novel Genes GO Heatmap") 
 FvsR_LvsR_FvsL_FvsS.heatmap1.MF 
 ggsave("~/Ferula_RNAseq_Analysis/Goseq_Analysis/FvsR_LvsR_FvsL_FvsS.heatmap1.MF.png", width = 13, height = 25)
+```
+#GO analysis for the result of WGCNA 
+```{r}
+#BP
+#violet.genesID <- read.table("~/Ferula_RNAseq_Analysis/WGCNA_out/Post_WGCNA_Analysis/violet.ModuleSelected.genesID_number.txt")
+genelist.violet <- violet.genesID$V2
+genelist.violet %>% length() #235 no enriched GO
+genelist.turquoise <- turquoise.genesID$V2
+genelist.turquoise %>% length() #3851 no MF, CC same as BP
+
+Drap_Oases_Plant6.GOseq.Bn.ORA.turquoise <-function(genelist,padjust=0.05,ontology="PB") { #return GO enrichment table, padjus, padjust=0.05
+#remove additional ID after running IPS
+TF<-(names(Drap_Oases_Plant6.bias) %in% genelist.turquoise)*1
+names(TF)<-names(Drap_Oases_Plant6.bias)
+pwf<-nullp(TF,bias.data=Drap_Oases_Plant6.bias)
+  GO.pval <- goseq(pwf,gene2cat=Drap_Oases_Plant6.Bngo.list,use_genes_without_cat=TRUE) 
+  if(ontology=="BP") {
+    GO.pval2<-subset(GO.pval,ontology=="BP")
+  } else if(ontology=="CC") {
+    GO.pval2<-subset(GO.pval,ontology=="CC")
+  } else {
+    GO.pval2<-subset(GO.pval,ontology=="MF")
+  }
+
+GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,method="BH")
+  if(GO.pval2$over_represented_padjust[1]>padjust) stop("no enriched GO")
+  else {
+    enriched.GO<-GO.pval2[GO.pval2$over_represented_padjust<padjust,]
+    print("enriched.GO is")
+    print(enriched.GO)
+
+    ## write Term and Definition
+    for(i in 1:dim(enriched.GO)[1]) {
+      enriched.GO$Term[i]<-Term(GOTERM[[enriched.GO[i,"category"]]])
+      enriched.GO$Definition[i]<-Definition(GOTERM[[enriched.GO[i,"category"]]])
+    }
+    return(enriched.GO)
+  }
+}
+```
+#BnRNAseq for GO Enrichment (run)
+
+```{r}
+library(goseq)
+Drap_Oases_Plant6.DEgene.GO.ORA.gt.turquoise <- Drap_Oases_Plant6.GOseq.Bn.ORA.turquoise(genelist.turquoise) #no enriched GO
+class(Drap_Oases_Plant6.DEgene.GO.ORA.gt.turquoise)
+Drap_Oases_Plant6.DEgene.GO.ORA.gt.turquoise$term
+write.table(Drap_Oases_Plant6.DEgene.GO.ORA.gt.turquoise[,c(1,2,6)],row.names=FALSE,file="~/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6.DEgene.GO.ORA.gt.turquoise", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.DEgene.GO.ORA.gt.turquoise[,1:2],row.names=FALSE,file="~/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6.DEgene.GO.ORA.gt.turquoise.revigo", quote = FALSE,col.names = FALSE)
+```
+#GO Enrichment Heatmap (visualization)
+
+```{r}
+# 1) Loading Necessary Functions
+library(WGCNA);library(ggplot2);library(reshape2);library(scales); library (plyr)
+#draw heatmap for gt & gt:tissue effect genes 
+Drap_Oases_Plant6.gt.turquoise <- Drap_Oases_Plant6.DEgene.GO.ORA.gt.turquoise[,c("Term", "over_represented_padjust")] 
+names(Drap_Oases_Plant6.gt.turquoise)
+Drap_Oases_Plant6.gt.melt.turquoise <- melt(Drap_Oases_Plant6.gt.turquoise)
+Drap_Oases_Plant6.gt.melt.turquoise %>% length() #3
+Drap_Oases_Plant6.gt.melt.turquoise %>% head()
+ Drap_Oases_Plant6.gt.melt.turquoise$logPvalue <- -log10(Drap_Oases_Plant6.gt.melt.turquoise$value)
+
+# 2) Plot This time no plot then merge all of them in one figure
+
+```
+
+```{r}
+#black.genesID <- read.table("black.ModuleSelected.genesID_number.txt")
+genelist.black %>% length() #4180 no enriched GO
+genelist <- genelist.black
+#MEblack.small #use highly correlated genes in each modules
+#MEblack.smal.geneID <- MEblack.small
+#genelist.small.black <- MEblack.smal.geneID
+#genelist.small.black %>% length() #1697 no enriched GO
+#try for small.black
+Drap_Oases_Plant6.GOseq.Bn.ORA <-function(genelist,padjust=0.05,ontology="BP") { #return GO enrichment table, padjus, padjust=0.05
+TF<-(names(Drap_Oases_Plant6.bias) %in% genelist)*1
+names(TF)<-names(Drap_Oases_Plant6.bias)
+pwf<-nullp(TF,bias.data=Drap_Oases_Plant6.bias)
+  GO.pval <- goseq(pwf,gene2cat=Drap_Oases_Plant6.Bngo.list,use_genes_without_cat=TRUE) 
+  if(ontology=="BP") {
+    GO.pval2<-subset(GO.pval,ontology=="BP")
+  } else if(ontology=="CC") {
+    GO.pval2<-subset(GO.pval,ontology=="CC")
+  } else {
+    GO.pval2<-subset(GO.pval,ontology=="MF")
+  }
+
+GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,method="BH")
+  if(GO.pval2$over_represented_padjust[1]>padjust) stop("no enriched GO")
+  else {
+    enriched.GO<-GO.pval2[GO.pval2$over_represented_padjust<padjust,]
+    print("enriched.GO is")
+    print(enriched.GO)
+
+    ## write Term and Definition
+    for(i in 1:dim(enriched.GO)[1]) {
+      enriched.GO$Term[i]<-Term(GOTERM[[enriched.GO[i,"category"]]])
+      enriched.GO$Definition[i]<-Definition(GOTERM[[enriched.GO[i,"category"]]])
+    }
+    return(enriched.GO)
+  }
+}
+```
+#BnRNAseq for GO Enrichment (run)
+
+```{r}
+library(goseq)
+Drap_Oases_Plant6.DEgene.GO.ORA.gt.small.black <- Drap_Oases_Plant6.GOseq.Bn.ORA.small.black(genelist.small.black) #no enriched GO
+```
+
+
+```{r}
+#lightcyan.genesID <- read.table("lightcyan.ModuleSelected.genesID_number.txt")
+genelist.lightcyan <-lightcyan.genesID$V2
+genelist.lightcyan %>% length() #2339 
+genelist <- genelist.lightcyan
+#darkslateblue.genesID <- read.table("darkslateblue.ModuleSelected.genesID_number.txt")
+genelist.darkslateblue <- darkslateblue.genesID$V2
+genelist <-genelist.darkslateblue
+genelist %>% length() #2289
+genelist <- magenta.genesID$V2
+  Drap_Oases_Plant6.GOseq.Bn.ORA<-function(genelist,padjust=0.05,ontology="BP") { # return GO enrichment table, padjus, padjust=0.05
+  TF<-(names(Drap_Oases_Plant6.bias) %in% genelist)*1
+  names(TF)<-names(Drap_Oases_Plant6.bias) 
+  #print(TF) 
+  pwf<-nullp(TF,bias.data=Drap_Oases_Plant6.bias) 
+  #print(pwf$DEgenes) 
+  GO.pval <- goseq(pwf,gene2cat=Drap_Oases_Plant6.Bngo.list,use_genes_without_cat=TRUE)
+head(GO.pval)
+  if(ontology=="BP") {
+    GO.pval2<-subset(GO.pval,ontology=="BP")
+  } else if(ontology=="CC") {
+    GO.pval2<-subset(GO.pval,ontology=="CC")
+  } else {
+    GO.pval2<-subset(GO.pval,ontology=="MF")
+  }
+
+  GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,method="BH")
+  if(GO.pval2$over_represented_padjust[1]>padjust) stop("no enriched GO")
+  else {
+    enriched.GO<-GO.pval2[GO.pval2$over_represented_padjust<padjust,]
+    print("enriched.GO is")
+    print(enriched.GO)
+
+    ## write Term and Definition
+    for(i in 1:dim(enriched.GO)[1]) {
+      enriched.GO$Term[i]<-Term(GOTERM[[enriched.GO[i,"category"]]])
+      enriched.GO$Definition[i]<-Definition(GOTERM[[enriched.GO[i,"category"]]])
+    }
+    return(enriched.GO)
+  }
+}
+```
+#BnRNAseq for GO Enrichment (run)
+
+```{r}
+library(goseq)
+Drap_Oases_Plant6.DEgene.GO.ORA.gt.lightcyan <- Drap_Oases_Plant6.GOseq.Bn.ORA.lightcyan(genelist) #no enriched GO
+class(Drap_Oases_Plant6.DEgene.GO.ORA.gt.lightcyan)
+Drap_Oases_Plant6.DEgene.GO.ORA.gt.lightcyan$term
+write.table(Drap_Oases_Plant6.DEgene.GO.ORA.gt.lightcyan[,c(1,2,6)],row.names=FALSE,file="~/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6.DEgene.GO.ORA.gt.lightcyan", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.DEgene.GO.ORA.gt.lightcyan[,1:2],row.names=FALSE,file="~/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6.DEgene.GO.ORA.gt.lightcyan.revigo", quote = FALSE,col.names = FALSE)
+darkslateblue
+Drap_Oases_Plant6.DEgene.GO.ORA.gt.darkslateblue <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist) #no enriched GO
+class(Drap_Oases_Plant6.DEgene.GO.ORA.gt.lightcyan)
+Drap_Oases_Plant6.DEgene.GO.ORA.gt.lightcyan$term
+```
+#GO Enrichment Heatmap (visualization)
+
+```{r}
+# 1) Loading Necessary Functions
+library(WGCNA);library(ggplot2);library(reshape2);library(scales); library (plyr)
+#draw heatmap for gt & gt:tissue effect genes 
+Drap_Oases_Plant6.gt.lightcyan <- Drap_Oases_Plant6.DEgene.GO.ORA.gt.lightcyan[,c("Term", "over_represented_padjust")] 
+names(Drap_Oases_Plant6.gt.lightcyan)
+Drap_Oases_Plant6.gt.melt.lightcyan <- melt(Drap_Oases_Plant6.gt.lightcyan)
+Drap_Oases_Plant6.gt.melt.lightcyan %>% length() #3
+Drap_Oases_Plant6.gt.melt.lightcyan %>% head()
+ Drap_Oases_Plant6.gt.melt.lightcyan$logPvalue <- -log10(Drap_Oases_Plant6.gt.melt.lightcyan$value)
+
+# 2) Plot This time no plot then merge all of them in one figure
 ```
 

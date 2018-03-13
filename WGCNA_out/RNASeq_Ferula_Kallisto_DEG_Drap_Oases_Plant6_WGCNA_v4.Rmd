@@ -26,10 +26,12 @@ options(stringsAsFactors = FALSE) # have to run that
 ```{r}
 #import Davis libraries
 counts_WGCNA <- read.csv("~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_Davis_counts_kallisto.csv", header = T , row.names=1)
+
 dim(counts_WGCNA) # 60134 12
 colnames(counts_WGCNA)
-# eliminating genes with low expression levels by retaining genes with > 10 reads in > 3 samples
-counts_WGCNA <-counts_WGCNA[rowSums(counts_WGCNA > 10) >= 3,]
+# eliminating genes with low expression levels by retaining genes with > 10 reads in > 2 samples
+#https://labs.genetics.ucla.edu/horvath/CoexpressionNetwork/Rpackages/WGCNA/faq.html
+counts_WGCNA <-counts_WGCNA[rowSums(counts_WGCNA > 10) >= 2,]
 counts_WGCNA <- counts_WGCNA[,c("R2","R3","R6","S2","S3","S6","F2","F3","F6","L2","L3","L6")] #change the order or colnames to put same tissues near each other
 write.csv(counts_WGCNA, file="~/Ferula_RNAseq_Analysis/WGCNA_out/Ferula_RNAseq_combined_drap_oases_plant6_small_counts_WGCNA.csv")
 
@@ -52,7 +54,7 @@ nGenes #22995
 datExpr0root = as.data.frame((rootvoom));
 rownames(datExpr0root) #number of the samples
 nSamples <- nrow(datExpr0root) #3
-nGenes <- ncol(datExpr0root) #22995
+nGenes <- ncol(datExpr0root) #27694
 nSamples
 gsg = goodSamplesGenes(datExpr0root)
 #Error in goodGenes(datExpr, goodSamples, goodGenes, minFraction = minFraction,Too few genes with valid expression levels in the required number of samples. So I could not use each tissue dataset for constructing network
@@ -90,17 +92,17 @@ multiExpr[[3]] = list(data = as.data.frame(rootvoom))
 names(multiExpr[[3]]$data) = colnames(rootvoom)
 rownames(multiExpr[[3]]$data) = rownames(rootvoom)
 nSamples <- nrow(multiExpr[[3]]$data) #3
-nGenes <- ncol(multiExpr[[3]]$data) #22995
+nGenes <- ncol(multiExpr[[3]]$data) #27694
 multiExpr[[4]] = list(data = as.data.frame(flowervoom))
 names(multiExpr[[4]]$data) = colnames(flowervoom)
 rownames(multiExpr[[4]]$data) = rownames(flowervoom)
 nSamples <- nrow(multiExpr[[4]]$data) #3
-nGenes <- ncol(multiExpr[[4]]$data) #22995
+nGenes <- ncol(multiExpr[[4]]$data) #27694
 multiExpr[[5]] = list(data = as.data.frame(tissuesvoom))
 names(multiExpr[[5]]$data) = colnames(tissuesvoom)
 rownames(multiExpr[[5]]$data) = rownames(tissuesvoom)
 nSamples <- nrow(multiExpr[[5]]$data) #12
-nGenes <- ncol(multiExpr[[5]]$data) #22995
+nGenes <- ncol(multiExpr[[5]]$data) #27694
 nSamples
 exprSize = checkSets(multiExpr)
 exprSize
@@ -162,7 +164,7 @@ par(mfcol = c(2,2));
 par(mar = c(4.2, 4.2 , 2.2, 0.5))
 cex1 = 0.7;
 for (col in 1:length(plotCols)) for (set in 1:nSets) {
-if (set==1) {
+if (set==1) 
 plot(powerTables[[set]]$data[,1], -sign(powerTables[[set]]$data[,3])*powerTables[[set]]$data[,2],
 xlab="Soft Threshold (power)",ylab=colNames[col],type="n", ylim = ylim[, col],
 main = colNames[col]);
@@ -372,6 +374,18 @@ table(FilterGenes.turquoise)
 MEturquoise.small <- dimnames(data.frame(datExpr0tissues))[[2]][FilterGenes.turquoise]
 head(MEturquoise.small)
 save(MEturquoise.small,file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEturquoise_for_GO.csv", row.names =F, col.names = F, quote = F)
+
+#try for black module with 4180 genes
+#run FilterGenes for each modules separetaly
+#FilterGenes= abs(GS1)> .2 & abs(datKME$MM.brown)>.8
+FilterGenes.black <- abs(datKME$MM.black) >.8 #got FALSE & TRUE
+table(FilterGenes.black)
+#FALSE  TRUE 
+#25997  1697  
+#NOW important to know Which genes were filtered in?
+MEblack.small <- dimnames(data.frame(datExpr0tissues))[[2]][FilterGenes.black]
+head(MEblack.small)
+save(MEblack.small,file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEblack_for_GO.csv", row.names =F, col.names = F, quote = F)
 ```
 
 #relate modules to trait and identify important genes, 
@@ -519,5 +533,21 @@ dev.off()
 
 #start to downstream analysis
 #find DEgene's module number
-mkdir Post_WGCNA_Analysis, then cp muduleNumber.txt to find each DEgenes's module number
-
+mkdir Post_WGCNA_Analysis, then cp moduleNumber.txt to find each DEgenes's module number
+module_genesID<- colnames(datExpr0tissues)
+write.table(module_genesID,file = "~/Ferula_RNAseq_Analysis/WGCNA_out/Post_WGCNA_Analysis/module_genesID.txt")
+tail -27694 module_genesID.txt > module_genesID.txt2
+#sort based on the string not numeric so use -k1,1 without n
+cat module_genesID.txt2  |sort -k1,1 > module_genesID_sort.txt2
+cat moduleNumber.txt |sort -k1,1 > moduleNumber_sort.txt
+join -1 1 -2 1 module_genesID_sort.txt2 moduleNumber_sort.txt > module_genesID_number.txt
+cat module_genesID_number.txt | sort -k3,3 | less | awk '{print $3}' | uniq | sed "s/\"//g" | awk '{print "grep -w "$1" module_genesID_number.txt > "$1".ModuleSelected.genesID_number.txt"}' > Batch_Pick_Modules
+chmod +x Batch_Pick_Modules
+can check the Batch with nano
+./Batch_Pick_Modules
+Get 44 output, we have 44 modules based on table(moduleNumber), check how many genes are located in each module to make sure everything run OK
+violet.genesID <- read.table("violet.ModuleSelected.genesID_number.txt")
+violet.genesID$V2
+black.genesID <- read.table("black.ModuleSelected.genesID_number.txt")
+lightcyan.genesID <- read.table("lightcyan.ModuleSelected.genesID_number.txt")
+darkslateblue.genesID <- read.table("darkslateblue.ModuleSelected.genesID_number.txt")

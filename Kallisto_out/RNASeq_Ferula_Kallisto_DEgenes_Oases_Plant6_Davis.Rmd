@@ -187,6 +187,7 @@ lrt.trt.FvsR <- glmLRT(dge.fit, coef = "trtF")
 topTags(lrt.trt.FvsR)
 summary(dge.lrt.trt.FvsR <- decideTestsDGE(lrt.trt.FvsR, p=0.05))
 DEgene.FvsR<- topTags(lrt.trt.FvsR,n = Inf)$table[topTags(lrt.trt.FvsR,n = Inf)$table$FDR<0.05,]
+write.csv(DEgene.FvsR,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsR.csv")
 #   trtF
 #-1   153
 #0  27116
@@ -197,6 +198,7 @@ lrt.trt.SvsR <- glmLRT(dge.fit, coef = "trtS")
 topTags(lrt.trt.SvsR)
 summary(dge.lrt.trt.SvsR <- decideTestsDGE(lrt.trt.SvsR, p=0.05))
 DEgene.SvsR<- topTags(lrt.trt.SvsR,n = Inf)$table[topTags(lrt.trt.SvsR,n = Inf)$table$FDR<0.05,]
+write.csv(DEgene.SvsR,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.SvsR.csv")
 #   trtS
 #-1   3
 #0  27689
@@ -207,6 +209,7 @@ lrt.trt.LvsR <- glmLRT(dge.fit, coef = "trtL")
 topTags(lrt.trt.LvsR)
 summary(dge.lrt.trt.LvsR <- decideTestsDGE(lrt.trt.LvsR, p=0.05))
 DEgene.LvsR<- topTags(lrt.trt.LvsR,n = Inf)$table[topTags(lrt.trt.LvsR,n = Inf)$table$FDR<0.05,]
+write.csv(DEgene.LvsR,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.LvsR.csv")
 #   trtS
 #-1   2794
 #0  23915
@@ -223,6 +226,7 @@ lrt.trt.FvsS <- glmLRT(dge.fit, coef = "trtF")
 topTags(lrt.trt.FvsS)
 summary(dge.lrt.trt.FvsS <- decideTestsDGE(lrt.trt.FvsS, p=0.05))
 DEgene.FvsS<- topTags(lrt.trt.FvsS,n = Inf)$table[topTags(lrt.trt.FvsS,n = Inf)$table$FDR<0.05,]
+write.csv(DEgene.FvsS,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsS.csv")
 #   trtF
 #-1   80
 #0  27201
@@ -250,6 +254,7 @@ lrt.trt.FvsL <- glmLRT(dge.fit, coef = "trtF")
 topTags(lrt.trt.FvsL)
 summary(dge.lrt.trt.FvsL <- decideTestsDGE(lrt.trt.FvsL, p=0.05))
 DEgene.FvsL<- topTags(lrt.trt.FvsL,n = Inf)$table[topTags(lrt.trt.FvsL,n = Inf)$table$FDR<0.05,]
+write.csv(DEgene.FvsL,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsL.csv")
 #   trtF
 #-1   65
 #0  26987

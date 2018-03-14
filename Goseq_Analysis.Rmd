@@ -24,8 +24,9 @@ setwd("~/Ferula_RNAseq_Analysis/Goseq_Analysis")
 # cat Drap_Oases_Plant6_interproscan.tsv | awk '{print $1,$NF}' | sed '/GO:/!d' | sort | uniq > Drap_Oases_Plant6_GO_rough # Getting Transcript ID and GO terms
 #cat Drap_Oases_Plant6_interproscan.tsv | awk '{print $1,$NF}' | sed '/GO:/!d' | sort | uniq | wc
 #23484   46968 1312015
-#cat Drap_Oases_Plant6_GO_rough | sed 's/|/ /g' > qqqq
-# cat Drap_Oases_Plant6_GO_rough | awk 'BEGIN{FS=" "}{print NF}' | sort | uniq -c # Finding lines with X fields (Max fields: 8)
+#cat Drap_Oases_Plant6_GO_rough | sed 's/|/ /g' > Drap_Oases_Plant6_GO_rough2 
+#cat Drap_Oases_Plant6_GO_rough2 | awk 'BEGIN{FS=" "}{print NF}' | sort | uniq -c
+# # Finding lines with X fields (Max fields: 8)
 #  10712 2
 #    7358 3
 #   3560 4

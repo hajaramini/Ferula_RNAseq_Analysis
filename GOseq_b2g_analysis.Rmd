@@ -75,33 +75,23 @@ b2g_project_GO_final <- aaa #need this file for GO enrichment
 #GO Enrichment (function)
 
 ```{r}
-Drap_Oases_Plant6.Bngo<-read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/GOseq_b2g_analysis/b2g_project_GO_final3",header=FALSE, stringsAsFactors = F) #add stringsAsFactors to fix the prob of creation list in next step
+Drap_Oases_Plant6.Bngo<-read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/GOseq_b2g_input_out/b2g_project_GO_final3",header=FALSE, stringsAsFactors = F) #add stringsAsFactors to fix the prob of creation list in next step
 #convert Drap_Oases_Plant6.Bngo to list for using in downstream analysis, it is very important to have the list for ech object
-View(Drap_Oases_Plant6.Bngo)
 View(Drap_Oases_Plant6.Bngo)
 aaa <- as.list(Drap_Oases_Plant6.Bngo$V2)
 names(aaa) <- Drap_Oases_Plant6.Bngo$V1
 head(aaa)
-Drap_Oases_Plant6.Bngo.list <- aaa
+Drap_Oases_Plant6.Bngo.list <- aaa #use this list for downstreaming analysis
 #1) GO annotaion 
 library(ShortRead);library(goseq);library(GO.db);library("annotate");
 #for ggplot heatmap library(heatmap)
 library(WGCNA);library(ggplot2);library(reshape2);library(scales); library (plyr)
-Drap_Oases_Plant6.cdna<-readDNAStringSet("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6_No_Whitespace.fasta")
+Drap_Oases_Plant6.cdna<-readDNAStringSet("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Goseq_interpro_input_out/Drap_Oases_Plant6_No_Whitespace.fasta")
 head(Drap_Oases_Plant6.cdna)
 Drap_Oases_Plant6.bias<-nchar(Drap_Oases_Plant6.cdna) #60134
 names(Drap_Oases_Plant6.bias)<-names(Drap_Oases_Plant6.cdna)
 length(Drap_Oases_Plant6.bias) # 60134
-# # bias.data vector must have the same length as DEgenes vector!
-#convert to list (onetime procedure)
-Drap_Oases_Plant6.Bngo<-read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/GOseq_b2g_analysis/b2g_project_GO_final3",header=FALSE, stringsAsFactors = F) # read Br_GO.txt in excel and save as csv
-aaa <- as.list(Drap_Oases_Plant6.Bngo$V2)
-names(aaa) <- Drap_Oases_Plant6.Bngo$V1
-Drap_Oases_Plant6.Bngo.list <- aaa
-dim(Drap_Oases_Plant6.Bngo) #47134  2
-head(head(Drap_Oases_Plant6.Bngo))
-tail(head(Drap_Oases_Plant6.Bngo))
-Drap_Oases_Plant6.Bngo.list <- tapply(as.character(Drap_Oases_Plant6.Bngo$V2),Drap_Oases_Plant6.Bngo$V1,c)
+#Drap_Oases_Plant6.Bngo.list <- aaa
 head(Drap_Oases_Plant6.Bngo.list)
 save(Drap_Oases_Plant6.Bngo.list,file="/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/GOseq_b2g_analysis/Drap_Oases_Plant6.Bngo.list.Rdata")
 Drap_Oases_Plant6.Bngo.DF<-as.data.frame(Drap_Oases_Plant6.Bngo.list)

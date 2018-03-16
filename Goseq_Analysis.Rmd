@@ -54,7 +54,7 @@ write.table(Drap_Oases_Plant6_interpro_melt,file="/Network/Servers/avalanche.plb
 # 3) Command Line Post Melt Formatting
 
 ```{r}
-# cat Drap_Oases_Plant6_interproscan_melt | grep -v "V1 variable value" | awk '{print $1,$3}' | sort | uniq > Drap_Oases_Plant6_interproscan_edit # Removing leftover melt column
+# cat b2g_project_interpro_melt | grep -v "V1 variable value" | awk '{print $1,$3}'| sort | uniq >  b2g_project_edit # Removing leftover melt column
 # cat Drap_Oases_Plant6_interproscan_edit | sed 's/ GO:/_GO:/g' | sed 's/ filler//g' | sed 's/ //g'> Drap_Oases_Plant6_interproscan_sep #Adding _ Separator for Removal of Extra ID Number
 #cat Ae_interproscan_sep | awk -F_ '{$3="";print}' | sed 's/script /script_/g' | sed 's/  / /g' > Ae_interproscan_sep_edit # Removal of all Extra ID number
 #cat Drap_Oases_Plant6_interproscan_sep |  sed "s/_GO/\tGO/" | grep GO | sed "s/_.\t\|_..\t\|_...\t/\t/" |  sed "s/_.\t\|_..\t\|_...\t/\t/" | sed "s/_.\t\|_..\t\|_...\t/\t/" > Drap_Oases_Plant6_interproscan_sep_edit #wc 41361

@@ -281,7 +281,9 @@ Drap_Oases_Plant6.GO.ORA.gt.FvsL.CC <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,o
 Drap_Oases_Plant6.gt.FvsL.CC <- Drap_Oases_Plant6.GO.ORA.gt.FvsL.CC[,c("Term", "over_represented_padjust")]
 
 genelist <- DEgene.FvsS[,1] 
-Drap_Oases_Plant6.GO.ORA.gt.FvsS <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist) #no enriched GO
+Drap_Oases_Plant6.GO.ORA.gt.FvsS <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist) 
+Drap_Oases_Plant6.gt.FvsS <- Drap_Oases_Plant6.GO.ORA.gt.FvsS[,c("Term", "over_represented_padjust")]
+
 Drap_Oases_Plant6.GO.ORA.gt.FvsS.MF <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "MF")
 Drap_Oases_Plant6.gt.FvsS.MF <- Drap_Oases_Plant6.GO.ORA.gt.FvsS.MF[,c("Term", "over_represented_padjust")]
 Drap_Oases_Plant6.GO.ORA.gt.FvsS.CC <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "CC")
@@ -357,21 +359,37 @@ write.table(Drap_Oases_Plant6.GO.ORA.gt.LvsR[,1:2],row.names=FALSE,file="~/GOseq
 
 FvsR_LvsR.gt <- merge(Drap_Oases_Plant6.gt.FvsR, Drap_Oases_Plant6.gt.LvsR, by="Term", all=TRUE)
 names(FvsR_LvsR.gt)[c(2:3)] <- c("FvsR", "LvsR")
-FvsR_LvsR_FvsL.gt <- merge(FvsR_LvsR.gt,Drap_Oases_Plant6.gt.FvsL, by="Term",all=TRUE)
-names(FvsR_LvsR_FvsL.gt)[4] <- "FvsL"
-FvsR_LvsR_FvsL_FvsS.gt <- merge(FvsR_LvsR_FvsL.gt,Drap_Oases_Plant6.gt.FvsS, by="Term",all=TRUE)
-names(FvsR_LvsR_FvsL_FvsS.gt)[5] <- "FvsS"
-FvsR_LvsR_FvsL_FvsS.gt.melt <- melt(FvsR_LvsR_FvsL_FvsS.gt)
-FvsR_LvsR_FvsL_FvsS.gt.melt 
-FvsR_LvsR_FvsL_FvsS.gt.melt $logPvalue <- -log10(FvsR_LvsR_FvsL_FvsS.gt.melt $value)
+FvsR_LvsR_FvsS.gt <- merge(FvsR_LvsR.gt,Drap_Oases_Plant6.gt.FvsS, by="Term",all=TRUE)
+names(FvsR_LvsR_FvsS.gt)[4] <- "FvsS"
+FvsR_LvsR_FvsS.gt.melt <- melt(FvsR_LvsR_FvsS.gt)
+FvsR_LvsR_FvsS.gt.melt
+FvsR_LvsR_FvsS.gt.melt$logPvalue <- -log10(FvsR_LvsR_FvsS.gt.melt$value)
 
 # 2) Plot 
-FvsR_LvsR_FvsL_FvsS.heatmap1 <- ggplot(data = FvsR_LvsR_FvsL_FvsS.gt.melt)
-FvsR_LvsR_FvsL_FvsS.heatmap1 <- FvsR_LvsR_FvsL_FvsS.heatmap1 + geom_tile(color = "black", aes(x = factor(variable), y = Term, fill=logPvalue)) + scale_fill_gradient2(low=muted("green"), high=muted("magenta")) 
-FvsR_LvsR_FvsL_FvsS.heatmap1 <- FvsR_LvsR_FvsL_FvsS.heatmap1 + labs(y = "GO Term", x="Genotype", title="Ferula assafoetida Novel Genes GO Heatmap") 
-FvsR_LvsR_FvsL_FvsS.heatmap1 
-ggsave("~/Ferula_RNAseq_Analysis/Goseq_Analysis/FvsR_LvsR_FvsL_FvsS.heatmap1.png", width = 13, height = 25)
+FvsR_LvsR_FvsS.heatmap <- ggplot(data = FvsR_LvsR_FvsS.gt.melt)
+FvsR_LvsR_FvsS.heatmap <- FvsR_LvsR_FvsS.heatmap + geom_tile(color = "black", aes(x = factor(variable), y = Term, fill=logPvalue)) + scale_fill_gradient2(low=muted("green"), high=muted("magenta")) 
+FvsR_LvsR_FvsS.heatmap <- FvsR_LvsR_FvsS.heatmap + labs(y = "GO Term", x="Genotype", title="Ferula assafoetida DEgenes GO Heatmap") 
+FvsR_LvsR_FvsS.heatmap 
+ggsave("~/GOseq_b2g_input_out/FvsR_LvsR_FvsS.heatmap.png", width = 13, height = 25)
 ```
+
+```{r}
+genelist <- DEgene.FvsR[,1] 
+Drap_Oases_Plant6.GO.ORA.gt.FvsR <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist)
+Drap_Oases_Plant6.gt.FvsR <- Drap_Oases_Plant6.GO.ORA.gt.FvsR[,c("Term", "over_represented_padjust")] 
+```
+
+#run GO function for 44 modules,specify genelist for each of them
+
+```{r}
+violet.genesID <- read.table("~/WGCNA_input_out/Post_WGCNA_Analysis/violet.ModuleSelected.genesID_number.txt")
+genelist <- violet.genesID$V2 
+Drap_Oases_Plant6.GO.ORA.gt.violet <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist) #no enriched GO
+Drap_Oases_Plant6.gt.violet<- Drap_Oases_Plant6.GO.ORA.gt.violet[,c("Term", "over_represented_padjust")]
+
+write.table(Drap_Oases_Plant6.GO.ORA.gt.violet[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.violet", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.violet[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.violet", quote = FALSE,col.names = FALSE)
+#for loop????
 ```
 
 

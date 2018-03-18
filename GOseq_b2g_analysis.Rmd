@@ -52,15 +52,18 @@ write.table(b2g_project_interpro_melt,file="/Network/Servers/avalanche.plb.ucdav
 #test <- read.delim("b2g_project_edit3", header = F, sep = "\t")
 View(test)
 test <- read.delim("b2g_project_edit3", header = F, sep = " ")
+#test[test$V2 == "GO:0000786",] #check the specific GO term and find the genes ID for this GO term
+#convert Drap_Oases_Plant6.Bngo to list for using in downstream analysis, it is very important to have the list for each object, This value use for GOseq function
+test.list <- tapply(as.character(test$V2),test$V1,c) #use this value for GOseq function
 #library(reshape2)
 #library(tidyverse)
-m.test <- melt(test)
-View(m.test)
+#m.test <- melt(test)
+#View(m.test)
 #the helpfull function for combining second column based on first column
-aaa <- test %>% group_by(V1) %>% arrange(V2) %>% summarise(V2 = paste(V2, collapse =";"))
-View(aaa)
-aaa %>% dim() #47134 2
-b2g_project_GO_final <- aaa #need this file for GO enrichment
+#aaa <- test %>% group_by(V1) %>% arrange(V2) %>% summarise(V2 = paste(V2, collapse =";"))
+#View(aaa)
+#aaa %>% dim() #47134 2
+#b2g_project_GO_final <- aaa # I do not use this value for downstream analysis
 #save(b2g_project_GO_final, file = "~/Ferula_RNAseq_Analysis/GOseq_b2g_analysis/b2g_project_edit_final.RData")
 #write.csv(b2g_project_GO_final,"~/Ferula_RNAseq_Analysis/GOseq_b2g_analysis/b2g_project_GO_final")
 ```
@@ -76,12 +79,12 @@ b2g_project_GO_final <- aaa #need this file for GO enrichment
 
 ```{r}
 Drap_Oases_Plant6.Bngo<-read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/GOseq_b2g_input_out/b2g_project_GO_final3",header=FALSE, stringsAsFactors = F) #add stringsAsFactors to fix the prob of creation list in next step
-#convert Drap_Oases_Plant6.Bngo to list for using in downstream analysis, it is very important to have the list for ech object
+#convert Drap_Oases_Plant6.Bngo to list for using in downstream analysis, it is very important to have the list for ech object, but this did not work for GOseq function,we need to seperate each GO term by "" 
 View(Drap_Oases_Plant6.Bngo)
-aaa <- as.list(Drap_Oases_Plant6.Bngo$V2)
-names(aaa) <- Drap_Oases_Plant6.Bngo$V1
-head(aaa)
-Drap_Oases_Plant6.Bngo.list <- aaa #use this list for downstreaming analysis
+#aaa <- as.list(Drap_Oases_Plant6.Bngo$V2)
+#names(aaa) <- Drap_Oases_Plant6.Bngo$V1
+#head(aaa)
+Drap_Oases_Plant6.Bngo.list <- test.list #use this list for downstreaming analysis
 #1) GO annotaion 
 library(ShortRead);library(goseq);library(GO.db);library("annotate");
 #for ggplot heatmap library(heatmap)
@@ -91,31 +94,28 @@ head(Drap_Oases_Plant6.cdna)
 Drap_Oases_Plant6.bias<-nchar(Drap_Oases_Plant6.cdna) #60134
 names(Drap_Oases_Plant6.bias)<-names(Drap_Oases_Plant6.cdna)
 length(Drap_Oases_Plant6.bias) # 60134
-#Drap_Oases_Plant6.Bngo.list <- aaa
-head(Drap_Oases_Plant6.Bngo.list)
-save(Drap_Oases_Plant6.Bngo.list,file="/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/GOseq_b2g_analysis/Drap_Oases_Plant6.Bngo.list.Rdata")
-Drap_Oases_Plant6.Bngo.DF<-as.data.frame(Drap_Oases_Plant6.Bngo.list)
-dim(Drap_Oases_Plant6.Bngo.DF) #47134 1
-Drap_Oases_Plant6.Bngo.DF$gene<-rownames(Drap_Oases_Plant6.Bngo.DF)
+save(Drap_Oases_Plant6.Bngo.list,file="/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/GOseq_b2g_input_out/Drap_Oases_Plant6.Bngo.list.Rdata")
+##Drap_Oases_Plant6.Bngo.DF<-as.data.frame(Drap_Oases_Plant6.Bngo.list)
+#dim(Drap_Oases_Plant6.Bngo.DF) #47134 1
+#Drap_Oases_Plant6.Bngo.DF$gene<-rownames(Drap_Oases_Plant6.Bngo.DF)
 #Drap_Oases_Plant6.Bngo.DF[1:10,]
-do.call(rbind.data.frame, Drap_Oases_Plant6.Bngo.list)
+#do.call(rbind.data.frame, Drap_Oases_Plant6.Bngo.list)
 #Drap_Oases_Plant6.Bngo.DF2<-do.call(rbind.data.frame,Drap_Oases_Plant6.Bngo.list) # ????
 ```
 
 ```{r}
-load("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/GOseq_b2g_analysis/Drap_Oases_Plant6.Bngo.list.Rdata")
+#load("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/GOseq_b2g_input_out/Drap_Oases_Plant6.Bngo.list.Rdata")
 #genelist could be any interested genes list (DEgenes list or all genes)
 #first run for all genes
-Drap_Oases_Plant6_ID<-read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/GOseq_b2g_analysis/b2g_project_ID",header=FALSE)
+Drap_Oases_Plant6_ID<-read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/GOseq_b2g_input_out/b2g_project_ID",header=FALSE)
 #first for all genes
 genelist <- Drap_Oases_Plant6_ID$V1 
-length(genelist)
-Drap_Oases_Plant6.GOseq.ORA <-function(genelist,padjust=0.05,ontology="BP") { #return GO enrichment table, padjus, padjust=0.05
-#remove additional ID after running IPS
+length(genelist) #47134
+Drap_Oases_Plant6.GOseq.Bn.ORA <-function(genelist,padjust=0.05,ontology="BP") { #return GO enrichment table, padjus, padjust=0.05
 TF<-(names(Drap_Oases_Plant6.bias) %in% genelist)*1
 names(TF)<-names(Drap_Oases_Plant6.bias)
 pwf<-nullp(TF,bias.data=Drap_Oases_Plant6.bias)
-  lengGO.pval <- goseq(pwf,gene2cat=Drap_Oases_Plant6.Bngo.DF,use_genes_without_cat=TRUE) 
+  GO.pval <- goseq(pwf,gene2cat=Drap_Oases_Plant6.Bngo.list,use_genes_without_cat=TRUE) 
   if(ontology=="BP") {
     GO.pval2<-subset(GO.pval,ontology=="BP")
   } else if(ontology=="CC") {
@@ -144,10 +144,234 @@ GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,met
 #BnRNAseq for GO Enrichment (run)
 
 ```{r}
-library(goseq)
-Drap_Oases_Plant6.GO.ORA.gt <- Drap_Oases_Plant6.GOseq.ORA(genelist)
+#library(goseq)
+Drap_Oases_Plant6.GO.ORA.gt <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist)
 class(Drap_Oases_Plant6.GO.ORA.gt)
 Drap_Oases_Plant6.GO.ORA.gt$term
-write.table(Drap_Oases_Plant6.GO.ORA.gt[,c(1,2,6)],row.names=FALSE,file="~/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6.DEgene.GO.ORA.gt", quote = FALSE,col.names = TRUE)
-write.table(Drap_Oases_Plant6.DEgene.GO.ORA.gt[,1:2],row.names=FALSE,file="~/Ferula_RNAseq_Analysis/Goseq_Analysis/Drap_Oases_Plant6.DEgene.GO.ORA.gt.revigo", quote = FALSE,col.names = FALSE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo", quote = FALSE,col.names = FALSE)
 ```
+
+#GO Enrichment Heatmap (visualization)
+
+```{r}
+# 1) Loading Necessary Functions
+library(WGCNA);library(ggplot2);library(reshape2);library(scales); library (plyr)
+#draw heatmap 
+Drap_Oases_Plant6.gt <- Drap_Oases_Plant6.GO.ORA.gt[,c("Term", "over_represented_padjust")] 
+names(Drap_Oases_Plant6.gt)
+Drap_Oases_Plant6.gt.melt <- melt(Drap_Oases_Plant6.gt)
+Drap_Oases_Plant6.gt.melt %>% length()
+Drap_Oases_Plant6.gt.melt %>% head()
+Drap_Oases_Plant6.gt.melt$logPvalue <- -log10(Drap_Oases_Plant6.gt.melt$value)
+
+# 2) Plot 
+Drap_Oases_Plant6.heatmap <- ggplot(data = Drap_Oases_Plant6.gt.melt)
+Drap_Oases_Plant6.heatmap <- Drap_Oases_Plant6.heatmap + geom_tile(color = "black", aes(x = factor(variable), y = Term, fill=logPvalue)) + scale_fill_gradient2(low=muted("green"), high=muted("magenta")) 
+Drap_Oases_Plant6.heatmap <- Drap_Oases_Plant6.heatmap + labs(y = "GO Term", title="Ferula assafoetida Novel Genes GO Heatmap") 
+Drap_Oases_Plant6.heatmap 
+ggsave("~/GOseq_b2g_input_out/Drap_Oases_Plant6.heatmap.png", width = 13, height = 25) #it is unclear figure
+
+```
+
+#Subsetting MF
+
+```{r}
+#library(goseq)
+Drap_Oases_Plant6.GO.ORA.gt.MF <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = MF)
+class(Drap_Oases_Plant6.GO.ORA.gt.MF)
+Drap_Oases_Plant6.GO.ORA.gt.MF$term
+write.table(Drap_Oases_Plant6.GO.ORA.gt.MF[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.MF", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.MF[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.MF", quote = FALSE,col.names = FALSE)
+```
+#Subsetting CC
+
+```{r}
+#library(goseq)
+Drap_Oases_Plant6.GO.ORA.gt.CC <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "CC")
+class(Drap_Oases_Plant6.GO.ORA.gt.CC)
+Drap_Oases_Plant6.GO.ORA.gt.CC$term
+write.table(Drap_Oases_Plant6.GO.ORA.gt.CC[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.CC", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.CC[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.CC", quote = FALSE,col.names = FALSE)
+save(Drap_Oases_Plant6.GO.ORA.gt,Drap_Oases_Plant6.GO.ORA.gt.MF,Drap_Oases_Plant6.GO.ORA.gt.CC, file = "~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.term.Rdata")
+```
+
+```{r}
+genelist <- Drap_Oases_Plant6_ID$V1 
+length(genelist) #47134
+Drap_Oases_Plant6.GOseq.Bn.ORA <-function(genelist,padjust=0.05,ontology="BP") { #return GO enrichment table, padjus, padjust=0.05
+TF<-(names(Drap_Oases_Plant6.bias) %in% genelist)*1
+names(TF)<-names(Drap_Oases_Plant6.bias)
+pwf<-nullp(TF,bias.data=Drap_Oases_Plant6.bias)
+  GO.pval <- goseq(pwf,gene2cat=Drap_Oases_Plant6.Bngo.list,use_genes_without_cat=TRUE) 
+  if(ontology=="BP") {
+    GO.pval2<-subset(GO.pval,ontology=="BP")
+  } else if(ontology=="CC") {
+    GO.pval2<-subset(GO.pval,ontology=="CC")
+  } else {
+    GO.pval2<-subset(GO.pval,ontology=="MF")
+  }
+
+GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,method="BH")
+  if(GO.pval2$over_represented_padjust[1]>padjust) stop("no enriched GO")
+  else {
+    enriched.GO<-GO.pval2[GO.pval2$over_represented_padjust<padjust,]
+    print("enriched.GO is")
+    print(enriched.GO)
+
+    ## write Term and Definition
+    for(i in 1:dim(enriched.GO)[1]) {
+      enriched.GO$Term[i]<-Term(GOTERM[[enriched.GO[i,"category"]]])
+      enriched.GO$Definition[i]<-Definition(GOTERM[[enriched.GO[i,"category"]]])
+    }
+    return(enriched.GO)
+  }
+}
+```
+
+```{r}
+#library(goseq)
+Drap_Oases_Plant6.GO.ORA.gt <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist)
+class(Drap_Oases_Plant6.GO.ORA.gt)
+Drap_Oases_Plant6.GO.ORA.gt$term
+write.table(Drap_Oases_Plant6.GO.ORA.gt[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo", quote = FALSE,col.names = FALSE)
+```
+
+#GO Enrichment Heatmap (visualization)
+
+```{r}
+# 1) Loading Necessary Functions
+library(WGCNA);library(ggplot2);library(reshape2);library(scales); library (plyr)
+#draw heatmap 
+Drap_Oases_Plant6.gt <- Drap_Oases_Plant6.GO.ORA.gt[,c("Term", "over_represented_padjust")] 
+names(Drap_Oases_Plant6.gt)
+Drap_Oases_Plant6.gt.melt <- melt(Drap_Oases_Plant6.gt)
+Drap_Oases_Plant6.gt.melt %>% length()
+Drap_Oases_Plant6.gt.melt %>% head()
+Drap_Oases_Plant6.gt.melt$logPvalue <- -log10(Drap_Oases_Plant6.gt.melt$value)
+
+# 2) Plot 
+Drap_Oases_Plant6.heatmap <- ggplot(data = Drap_Oases_Plant6.gt.melt)
+Drap_Oases_Plant6.heatmap <- Drap_Oases_Plant6.heatmap + geom_tile(color = "black", aes(x = factor(variable), y = Term, fill=logPvalue)) + scale_fill_gradient2(low=muted("green"), high=muted("magenta")) 
+Drap_Oases_Plant6.heatmap <- Drap_Oases_Plant6.heatmap + labs(y = "GO Term", title="Ferula assafoetida Novel Genes GO Heatmap") 
+Drap_Oases_Plant6.heatmap 
+ggsave("~/GOseq_b2g_input_out/Drap_Oases_Plant6.heatmap.png", width = 13, height = 25) #it is unclear figure
+````
+
+#pairwise comparison
+
+```{r}
+#Flower vs others
+DEgene.FvsR <- read.csv("~/Kallisto_input_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsR.csv",header=T)
+DEgene.FvsL <- read.csv("~/Kallisto_input_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsL.csv",header=T)
+DEgene.FvsS <- read.csv("~/Kallisto_input_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsS.csv",header=T)
+genelist <- DEgene.FvsR[,1] 
+Drap_Oases_Plant6.GO.ORA.gt.FvsR <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist)
+Drap_Oases_Plant6.gt.FvsR <- Drap_Oases_Plant6.GO.ORA.gt.FvsR[,c("Term", "over_represented_padjust")] 
+Drap_Oases_Plant6.GO.ORA.gt.FvsR.MF <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "MF")
+Drap_Oases_Plant6.gt.FvsR.MF <- Drap_Oases_Plant6.GO.ORA.gt.FvsR.MF[,c("Term", "over_represented_padjust")] 
+Drap_Oases_Plant6.GO.ORA.gt.FvsR.CC <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist, ontology = "CC", padjust = 0.075) #no enriched GO
+
+genelist <- DEgene.FvsL[,1] 
+Drap_Oases_Plant6.GO.ORA.gt.FvsL <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist) #no enriched GO
+Drap_Oases_Plant6.GO.ORA.gt.FvsL.MF <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "MF")
+Drap_Oases_Plant6.gt.FvsL.MF <- Drap_Oases_Plant6.GO.ORA.gt.FvsL.MF[,c("Term", "over_represented_padjust")]
+Drap_Oases_Plant6.GO.ORA.gt.FvsL.CC <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "CC")
+Drap_Oases_Plant6.gt.FvsL.CC <- Drap_Oases_Plant6.GO.ORA.gt.FvsL.CC[,c("Term", "over_represented_padjust")]
+
+genelist <- DEgene.FvsS[,1] 
+Drap_Oases_Plant6.GO.ORA.gt.FvsS <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist) #no enriched GO
+Drap_Oases_Plant6.GO.ORA.gt.FvsS.MF <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "MF")
+Drap_Oases_Plant6.gt.FvsS.MF <- Drap_Oases_Plant6.GO.ORA.gt.FvsS.MF[,c("Term", "over_represented_padjust")]
+Drap_Oases_Plant6.GO.ORA.gt.FvsS.CC <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "CC")
+Drap_Oases_Plant6.gt.FvsS.CC <- Drap_Oases_Plant6.GO.ORA.gt.FvsS.CC[,c("Term", "over_represented_padjust")]
+
+save(Drap_Oases_Plant6.GO.ORA.gt.FvsL.CC,Drap_Oases_Plant6.GO.ORA.gt.FvsL.MF,file = "~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.FvsL.term.Rdata")
+
+save(Drap_Oases_Plant6.GO.ORA.gt.FvsS,Drap_Oases_Plant6.GO.ORA.gt.FvsS.MF,Drap_Oases_Plant6.GO.ORA.gt.FvsS.CC,file = "~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.FvsS.term.Rdata")
+
+save(Drap_Oases_Plant6.GO.ORA.gt.FvsR,Drap_Oases_Plant6.GO.ORA.gt.FvsR.CC,Drap_Oases_Plant6.GO.ORA.gt.FvsR.MF,file = "~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.FvsR.term.Rdata")
+
+```
+
+```{r}
+#Leaf vs others
+DEgene.LvsR <- read.csv("~/Kallisto_input_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.LvsR.csv",header=T)
+genelist <- DEgene.LvsR[,1] 
+Drap_Oases_Plant6.GO.ORA.gt.LvsR <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist)
+Drap_Oases_Plant6.gt.LvsR <- Drap_Oases_Plant6.GO.ORA.gt.LvsR[,c("Term", "over_represented_padjust")]
+Drap_Oases_Plant6.GO.ORA.gt.LvsR.MF <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "MF")
+Drap_Oases_Plant6.gt.LvsR.MF <- Drap_Oases_Plant6.GO.ORA.gt.LvsR.MF[,c("Term", "over_represented_padjust")]
+
+Drap_Oases_Plant6.GO.ORA.gt.LvsR.CC <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist, ontology = "CC") 
+Drap_Oases_Plant6.gt.LvsR.CC <- Drap_Oases_Plant6.GO.ORA.gt.LvsR.CC[,c("Term", "over_represented_padjust")]
+
+save(Drap_Oases_Plant6.GO.ORA.gt.LvsR,Drap_Oases_Plant6.GO.ORA.gt.LvsR.CC,Drap_Oases_Plant6.GO.ORA.gt.LvsR.MF,file = "~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.LvsR.term.Rdata")
+```
+
+#save
+
+```{r}
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsL.CC[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.FvsL.CC", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsL.CC[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.FvsL.CC", quote = FALSE,col.names = FALSE)
+
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsL.MF[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.FvsL.MF", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsL.MF[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.FvsL.MF", quote = FALSE,col.names = FALSE)
+
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsR.CC[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.FvsR.CC", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsR.CC[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.FvsR.CC", quote = FALSE,col.names = FALSE)
+
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsR.MF[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.FvsR.MF", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsR.MF[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.FvsR.MF", quote = FALSE,col.names = FALSE)
+
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsR[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.FvsR", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsR[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.FvsR", quote = FALSE,col.names = FALSE)
+
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsS[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.FvsS", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsS[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.FvsS", quote = FALSE,col.names = FALSE)
+
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsS.CC[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.FvsS.CC", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsS.CC[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.FvsS.CC", quote = FALSE,col.names = FALSE)
+
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsS[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.FvsS", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsS[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.FvsS", quote = FALSE,col.names = FALSE)
+
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsS.MF[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.FvsS.MF", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.FvsS.MF[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.FvsS.MF", quote = FALSE,col.names = FALSE)
+
+write.table(Drap_Oases_Plant6.GO.ORA.gt.LvsR.CC[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.LvsR.CC", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.LvsR.CC[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.LvsR.CC", quote = FALSE,col.names = FALSE)
+
+write.table(Drap_Oases_Plant6.GO.ORA.gt.LvsR.MF[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.LvsR.MF", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.LvsR.MF[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.LvsR.MF", quote = FALSE,col.names = FALSE)
+
+write.table(Drap_Oases_Plant6.GO.ORA.gt.LvsR[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.LvsR", quote = FALSE,col.names = TRUE)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.LvsR[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.LvsR", quote = FALSE,col.names = FALSE)
+```
+
+#Visualization
+
+```{r}
+#merge all pairwise comparision in to one figure
+
+FvsR_LvsR.gt <- merge(Drap_Oases_Plant6.gt.FvsR, Drap_Oases_Plant6.gt.LvsR, by="Term", all=TRUE)
+names(FvsR_LvsR.gt)[c(2:3)] <- c("FvsR", "LvsR")
+FvsR_LvsR_FvsL.gt <- merge(FvsR_LvsR.gt,Drap_Oases_Plant6.gt.FvsL, by="Term",all=TRUE)
+names(FvsR_LvsR_FvsL.gt)[4] <- "FvsL"
+FvsR_LvsR_FvsL_FvsS.gt <- merge(FvsR_LvsR_FvsL.gt,Drap_Oases_Plant6.gt.FvsS, by="Term",all=TRUE)
+names(FvsR_LvsR_FvsL_FvsS.gt)[5] <- "FvsS"
+FvsR_LvsR_FvsL_FvsS.gt.melt <- melt(FvsR_LvsR_FvsL_FvsS.gt)
+FvsR_LvsR_FvsL_FvsS.gt.melt 
+FvsR_LvsR_FvsL_FvsS.gt.melt $logPvalue <- -log10(FvsR_LvsR_FvsL_FvsS.gt.melt $value)
+
+# 2) Plot 
+FvsR_LvsR_FvsL_FvsS.heatmap1 <- ggplot(data = FvsR_LvsR_FvsL_FvsS.gt.melt)
+FvsR_LvsR_FvsL_FvsS.heatmap1 <- FvsR_LvsR_FvsL_FvsS.heatmap1 + geom_tile(color = "black", aes(x = factor(variable), y = Term, fill=logPvalue)) + scale_fill_gradient2(low=muted("green"), high=muted("magenta")) 
+FvsR_LvsR_FvsL_FvsS.heatmap1 <- FvsR_LvsR_FvsL_FvsS.heatmap1 + labs(y = "GO Term", x="Genotype", title="Ferula assafoetida Novel Genes GO Heatmap") 
+FvsR_LvsR_FvsL_FvsS.heatmap1 
+ggsave("~/Ferula_RNAseq_Analysis/Goseq_Analysis/FvsR_LvsR_FvsL_FvsS.heatmap1.png", width = 13, height = 25)
+```
+```
+
+

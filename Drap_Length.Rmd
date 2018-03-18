@@ -1,0 +1,57 @@
+---
+title: "Drap_Length"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# get the length for contigs of Drap_Oases_Plant6, Drap_Trinity_Plant6, Khmer result
+#1) prepare input file
+
+```{r}
+#awk '/^>/ {print "\tLen="sum"EXTRA"; print s; print; sum=0; s=""; next;}{sum=sum+length($0); s=s$0}' Drap_Oases_Plant6_No_Whitespace.fasta | sed ':a;N;$!ba;s/\n//g'|  sed "s/EXTRA/\n/g" | sed "s/>/\n>/" > Drap_Oases_Plant6_No_Whitespace.Lenght.fasta
+#perl /share/malooflab/Lab_Scripts/get_gene_lengths.pl Drap_Oases_Plant6_No_Whitespace.Length.fasta 
+#cat Drap_Oases_Plant6_No_Whitespace.Length.txt | sed 's/,/	/g' | cut -f1,3 > Drap_Oases_Plant6_No_Whitespace.Length.txt2
+
+#cat Drap_Trinity_Plant6.Length.txt | awk '{print $1,$2}' | sed 's/len=//g' > Drap_Trinity_Plant6.Length.txt2
+#cat Drap_Trinity_Plant6.Length.txt2 | sed 's/,/       /'g > Drap_Trinity_Plant6.Length.txt3
+
+#cat Trinity.Length.txt | awk '{print $1,$2}' | sed 's/len=//g' > Trinity.Length.txt2
+#mv Trinity.Length.txt2 Khmer.Length.txt
+```
+
+```{r}
+Drap_Oases_Length<- read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Drap_Length/Drap_Oases_Plant6_No_Whitespace.Length.txt2", header = F)
+Drap_Trinity_Length<- read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Drap_Length/Drap_Trinity_Plant6.Length.txt3", header = F)
+Khmer_Length<- read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Drap_Length/Khmer.Length.txt", header = F)
+```
+# 2) Length Distribution Function
+
+```{r}
+
+length.distr.calc <- function(length.data){
+   length.distr <- data.frame(range = c("<200","200-500","500-1000","1000-1500","1500-2000","2000-5000",">5000"), 
+                             Percentage = c(round(sum(length.data$V2<200)/nrow(length.data), digits = 2), round(sum(length.data$V2>=200 & length.data$V2<500)/nrow(length.data), digits = 2), round(sum(length.data$V2>=500 & length.data$V2<1000)/nrow(length.data), digits = 2),  round(sum(length.data$V2>=1000 & length.data$V2<1500)/nrow(length.data), digits = 2), round(sum(length.data$V2>=1500 & length.data$V2<2000)/nrow(length.data), digits = 2), round(sum(length.data$V2>=2000 & length.data$V2<5000)/nrow(length.data), digits = 2), round(sum(length.data$V2>=5000)/nrow(length.data), digits = 2)),
+                          Class = deparse(substitute(length.data)))
+return(length.distr)
+}
+
+length.distr<- rbind(length.distr.calc(Khmer_Length),length.distr.calc(Drap_Trinity_Length),length.distr.calc(Drap_Oases_Length))
+length.distr$range <- factor(length.distr$range, levels = c("<200","200-500","500-1000","1000-1500","1500-2000","2000-5000",">5000"))
+
+```
+# 3) Plotting 
+
+```{r}
+# library(ggplot2)
+p.length.distr <- ggplot(data = length.distr)
+p.length.distr <- p.length.distr + geom_bar(aes(x=as.factor(range), y=Percentage, fill=Class), stat = "identity")
+p.length.distr <- p.length.distr + facet_wrap(~Class) 
+p.length.distr <- p.length.distr + labs(list(title = "", x = "Length range", y = "Percentage"))
+p.length.distr <- p.length.distr + theme(axis.text.x = element_text(angle = 90, size = 8))
+p.length.distr
+ggsave(p.length.distr,file="~/length.distr_Khmer_Trinity_Oases.png",width=8,height=5)
+)
+```
+

@@ -1,0 +1,6 @@
+To get the plot for %mapped reads of STAR for putting on draft
+x <- read.csv("~/Desktop/STAR_resdult.csv",sep = "\t")
+y <- ggplot(x, aes(Tissue, Uniquely.mapped.reads)) + 
+  geom_point(aes(colour = Assembler)) +
+  scale_x_discrete(limits=c("Root","Stem","Leaf","Flower"))
+ggsave(y,file="~/Desktop/STAR_mapped.png",width=8,height=8)

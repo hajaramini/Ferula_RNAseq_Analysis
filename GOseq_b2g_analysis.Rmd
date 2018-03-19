@@ -375,16 +375,29 @@ ggsave("~/GOseq_b2g_input_out/FvsR_LvsR_FvsS.heatmap.png", width = 13, height = 
 
 ```{r}
 genelist <- DEgene.FvsR[,1] 
-Drap_Oases_Plant6.GO.ORA.gt.FvsR <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist)
+Drap_Oases_Plant6.GO.ORA.gt.FvsR <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist))
 Drap_Oases_Plant6.gt.FvsR <- Drap_Oases_Plant6.GO.ORA.gt.FvsR[,c("Term", "over_represented_padjust")] 
 ```
 
 #run GO function for 44 modules,specify genelist for each of them
 
 ```{r}
-violet.genesID <- read.table("~/WGCNA_input_out/Post_WGCNA_Analysis/violet.ModuleSelected.genesID_number.txt")
+files <- unlist(read.delim("~/WGCNA_input_out/Post_WGCNA_Analysis/file_list.txt", stringsAsFactors = F))
+for (module in files){
+  name <- paste0("~/WGCNA_input_out/Post_WGCNA_Analysis/", module)
+  color <- sub("\\..*","", module)
+  cat("Color is", color, "\n")
+  module.genesID <- read.table(name, stringsAsFactors = F)
+  genelist <- module.genesID$V2
+  over_enriched <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist))
+  if(class(over_enriched) != "try-error"){
+    write.table(over_enriched[,c(1,2,6)],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.",color), quote = FALSE,col.names = TRUE)
+    write.table(over_enriched[,1:2],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.revigo.", color), quote = FALSE,col.names = FALSE)
+  }
+}
+violet.genesID <- read.table("~/WGCNA_input_out/Post_WGCNA_Analysis/violet.ModuleSelected.genesID_number.txt", stringsAsFactors = F)
 genelist <- violet.genesID$V2 
-Drap_Oases_Plant6.GO.ORA.gt.violet <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist) #no enriched GO
+Drap_Oases_Plant6.GO.ORA.gt.violet <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist)) #no enriched GO
 Drap_Oases_Plant6.gt.violet<- Drap_Oases_Plant6.GO.ORA.gt.violet[,c("Term", "over_represented_padjust")]
 
 write.table(Drap_Oases_Plant6.GO.ORA.gt.violet[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.violet", quote = FALSE,col.names = TRUE)

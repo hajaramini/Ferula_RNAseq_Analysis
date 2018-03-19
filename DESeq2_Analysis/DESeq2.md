@@ -673,11 +673,43 @@ heatmap.2(d, main="Drap_oases (padj<0.05, log2FC = ±1)",
 dev.off() 
 
 ```
+#grep contig name for uniref ID
+
+```{r}
+#awk '{print $1}' mycl.txt | sed 's/"//g' > mycl.txt2 
+#wc -l mycl.txt2
+#nano mycl.txt2 remove x
+#grep -F -f mycl.txt2 ../Drap_Oases_Plant6_gene_name_id_dammit_namemap.csv3 > filtered.FvsR.tsv
+#wc filtered.FvsR.tsv 
+#less filtered.FvsR.tsv 
+#cat filtered.FvsR.tsv | awk '{print $1}' filtered.FvsR.tsv | sort | uniq | wc -l
+#cat filtered.FvsR.tsv | awk '{print $1}' filtered.FvsR.tsv | sort | uniq > filtered.FvsR.sort.tsv
+#check the final file
+#awk '{print $1}' filtered.FvsR.sort.tsv | sort | uniq | > temp1
+#awk '{print $1}' mycl.txt2 | sort | uniq >temp2
+#comm temp1 temp2
+#wc -l filtered.FvsR.sort.tsv
+#cat mycl.txt | awk '{if ($2==1) print;}' > mycl.txt.cluster1 run for each cluster
+#cat mycl.txt.cluster1 | sed 's/"//g' | awk '{print $1}' > mycl.txt.cluster1.v2
+#grep -F -f mycl.txt.cluster1.v2 ../Drap_Oases_Plant6_gene_name_id_dammit_namemap.csv3 > filtered.FvsR.cluster1.tsv
+#cat filtered.FvsR.cluster1.tsv | awk '{print $2}' > filtered.FvsR.cluster1.name.tsv
+```
+
+
+```{r}
+#https://github.com/ctb/2017-ucdavis-igg201b/tree/master/lab9
+gene.data.LvsR <- read.csv(file="Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.LvsR.csv", row.names=1)
+#Subset the data to identify the significantly DE genes as well as those that are increased in the WT condition:
+up.genes.LvsR <-subset(gene.data.LvsR, logFC > 1)
+#I want to have the geneID of Ara for Ferula contigs, pick the best evalue for each hit of blast against Ara db
+sort -k3,3n -k1,1 -u Final_basltp_withEvalue_clean.txt > test.txt
+mv test.txt Final_basltp_bestEvalue.txt 
+
+```
 
 #save the txt file encluding gene ID with 4 cluster, I want to use this file to find go term for uniref ID to see the go enrichment
 
 ```{r}
 write.table(mycl,"mycl.SvsL.txt",sep="\t") #used this file to see the number of cluster for each gene ID
 ```
-#for getting the gene's cluster in each DEgenes cluster
-#cat mycl.FvsL.txt | awk '{if ($2==6) print;}' > mycl.FvsL.cluster6.txt
+

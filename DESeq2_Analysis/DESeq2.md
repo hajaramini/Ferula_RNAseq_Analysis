@@ -693,8 +693,12 @@ dev.off()
 #cat mycl.txt.cluster1 | sed 's/"//g' | awk '{print $1}' > mycl.txt.cluster1.v2
 #grep -F -f mycl.txt.cluster1.v2 ../Drap_Oases_Plant6_gene_name_id_dammit_namemap.csv3 > filtered.FvsR.cluster1.tsv
 #cat filtered.FvsR.cluster1.tsv | awk '{print $2}' > filtered.FvsR.cluster1.name.tsv
-```
+#I do not think above command is right for getting gene ID becuase for one UniRef got multiple gene ID so it is better to grep Uniref to see in DAVID with gene ontology red "significantly"
+#DAVID start analysis uniprot_accession Gene Accession Conversion Tool,submit converted list,go ontology,pick red one, click on chart
 
+#cat mycl.txt.cluster1 | awk '{print $1}' | sed 's/"//g' | head -500 | sed 's/UniRef90_//g' | wc
+# 170     170    1802
+```
 
 ```{r}
 #https://github.com/ctb/2017-ucdavis-igg201b/tree/master/lab9

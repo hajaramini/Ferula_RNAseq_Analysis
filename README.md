@@ -9,3 +9,4 @@ To do network analyzing for all libraries came from Davis
 To do GO analysis for interproscan result
 To do GO analysis for b2g result
 keep .Rmd just in repository folder, keep input and output outside of this folder
+use library(pryr) to check the used memory of R mem_used()

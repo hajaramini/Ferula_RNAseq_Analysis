@@ -1,0 +1,618 @@
+
+transcriptome_assembly.Rmd
+
+
+download data & trimming
+# 1) download raw fastq data using wget 
+
+# 2) check data quality using fastqc 
+
+# 3) Trimm off low quality reads & adapter contamination 
+# trimmomatic PE Sample_${sample}/${sample}_1.fq.gz Sample_${sample}/${sample}_2.fq.gz Sample_${sample}/${sample}_paired_1.fq.gz Sample_${sample}/${sample}_unpaired_1.fq.gz Sample_${sample}/${sample}_paired_2.fq.gz Sample_${sample}/${sample}_unpaired_2.fq.gz ILLUMINACLIP:Bradseq_adapter.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+
+# 4) map high quality reads to reference genome using STAR
+# 4.1) add "gene_id" colomn to gff3 file 
+# run with modified gff3 file 
+# STAR --runMode genomeGenerate --genomeDir star_genome/ --genomeFastaFiles Brassica_napus_v4.1.chromosomes.fa --sjdbGTFfile Brassica_napus.annotation_v5_modified_modified.gff3 --runThreadN 6 --sjdbGTFtagExonParentTranscript Parent --sjdbGTFfeatureExon CDS (screen -r 10070.ttys003.coloma) 
+
+# 4.2)  mapping 
+# "STAR --genomeDir /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/ruijuanli/Reference/B.napus/star_genome --readFilesIn /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/ruijuanli/2016_summer/raw_data/Ae_Hu_2_1.fq /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/ruijuanli/2016_summer/raw_data/Ae_Hu_2_2.fq --outSAMtype BAM SortedByCoordinate --sjdbGTFfile /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/ruijuanli/Reference/B.napus/Brassica_napus.annotation_v5_modified_modified.gff3 --quantMode TranscriptomeSAM GeneCounts --twopassMode Basic –alignIntronMax 15000 --outFilterIntronMotifs RemoveNoncanonical --runThreadN 6 --sjdbGTFtagExonParentTranscript Parent --sjdbGTFfeatureExon CDS --outReadsUnmapped Fastx" 
+
+# 5) assembly 
+# 5.1) use IGV to decide library type 
+# after visualize genome, bam file, and gff file, we decide our library type is fr-secondstrand 
+# 5.2) assemble each library seperately using cufflinks 
+# transcriptome assembly using original gff3 file
+# cufflinks  -o /share/malooflab/Ruijuan/parent_assembly/${sample}/cufflink_output/ \
+# 	   --junc-alpha 0.001 \
+# 	   --label CUFF \
+# 	   --max-bundle-length 3500000 \
+# 	   --max-intron-length 300000 \
+# 	   --max-mle-iterations 5000 \
+# 	   --min-frags-per-transfrag 10 \
+# 	   --min-intron-length 50 \
+# 	   --min-isoform-fraction 0.1 \
+# 	   --no-update-check \
+# 	   --num-importance-samples 1000 \
+# 	   --num-threads 20 \
+# 	   --overhang-tolerance 8 \
+# 	   --pre-mrna-fraction 0.15 \
+# 	   --small-anchor-fraction 0.09 \
+# 	   --trim-3-avgcov-thresh 10 \
+# 	   --trim-3-dropoff-frac 0.1 \
+# 	   --library-type fr-secondstrand \
+# 	   -g /share/malooflab/Ruijuan/reference/Brassica_napus.annotation_v5.gff3 \
+# 	   -b /home/ruijuanli/2017_winter/assembly/Brassica_napus_v4.1.chromosomes.fa \
+# 	    /share/malooflab/Ruijuan/parent_assembly/${sample}/Aligned.sortedByCoord.out.bam
+
+# 6) merge seperate assembly into one using cuffmerge 
+# cuffmerge 
+# https://github.com/leejimmy93/KIAT_whitney/blob/master/parent_RNA_transcriptome/run_cuffmerge_Ae.sh 
+
+# https://github.com/leejimmy93/KIAT_whitney/blob/master/parent_RNA_transcriptome/run_cuffmerge_Ol.sh
+
+# 7) compare to current annotation for the reference genome  
+# cuffcompare 
+
+# https://github.com/leejimmy93/KIAT_whitney/blob/master/parent_RNA_transcriptome/run_cuffcompare_Ae.sh
+# https://github.com/leejimmy93/KIAT_whitney/blob/master/parent_RNA_transcriptome/run_cuffcompare_Ol.sh
+# get contigs with "u" code, need to remember how I get to here. 
+
+# 8) remove redundant isoforms from novel transcripts using CAP3 
+# https://github.com/leejimmy93/KIAT_whitney/blob/master/parent_RNA_transcriptome/run_cap3.sh
+# merge contigs & singletons for downstream analysis 
+
+# 9) predict ORF from non-redundant transcript dataset using transdecoder 
+# TransDecoder.LongOrfs -t Ae.u.fa.cap.contigs_singlets 
+# TransDecoder.LongOrfs -t Ol.u.fa.cap.contigs_singlets 
+
+# blastp against nr protein database to get an idea of what genes they are 
+# blastp -query longest_orfs.pep  -db /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/ruijuanli/Reference/NCBI/nr/nr  -max_target_seqs 1 -outfmt 6 -evalue 1e-6 -num_threads 6 -out ${i}_nr.out  
+
+# 10) multiple ORF were produced for each transcript, the number of transcripts with ORF identified are: 
+# Da-Ae (2311) & Da-Ol-1 (2427) : cat longest_orfs.pep | grep ">" | sed 's/:/\t/g' | awk '{print $2}' | sort | uniq | wc -l 
+
+# 11) the number of novel genes which can be annotated 
+  # cat longest_orfs.pep | grep ">" | sed 's/:/\t/g' | awk '{print $2}' | sort | uniq | wc -l
+  # for Da-Ae 2311; for Da-Ol-1 2427 
+
+# perl -ne 'if(/^>(\S+)/){$c=$i{$1}}$c?print:chomp;$i{$_}=1 if @ARGV' /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/ruijuanli/assembly_parent/transdecoder/after_cap3/Ol.u.fa.cap.contigs_singlets.transdecoder_dir/for_annotation_ID Ol.u.fa.cap.contigs_singlets > Ol_ref_for_annotation.fa  
+  
+# /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/ruijuanli/assembly_parent/reference_based_for_annotation/Ae_ref_for_annotation_final.fa  & 
+# /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/ruijuanli/assembly_parent/reference_based_for_annotation/Ol_ref_for_annotation.fa  
+De-novo Assembly
+# 1) In directory Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly
+# Run ./trimming.sh in a screen # (Trimmomatic + Illuminaclip) 
+
+# 2) Unzipping and Concatenating
+# In directory Users/calenbadger/De_novo_Assembly/Trimmed_Fastqs
+# zcat 05*1.p* 5_1.p* 6_1.p* 8_1.p* Ae*1.p* | gzip -c > Ae_Trimmed_1.paired.fq.gz
+# zcat 05*2.p* 5_2.p* 6_2.p* 8_2.p* Ae*2.p* | gzip -c > Ae_Trimmed_2.paired.fq.gz
+# zcat 1_1.p* 2_1.p* 3_1.p* 4_1.p* All1*1.p* | gzip -c > Ol_Trimmed_1.paired.fq.gz 
+# zcat 1_2.p* 2_2.p* 3_2.p* 4_2.p* All1*2.p* | gzip -c > Ol_Trimmed_2.paired.fq.gz
+
+# 3) Run Abundance Script for Ae and Ol
+# In /calenbadger/assembly_parent/B.napus/De_novo_Assembly
+# Option 1: kallisto (Ae)
+# perl /usr/local/stow/trinityrnaseq-2.2.0/util/align_and_estimate_abundance.pl \
+# --transcripts ./Da_Ae_Trinity.fasta.gz \
+# --seqType fq \
+# --left ./Trimmed_Fastqs/Ae_Trimmed_1.paired.fq.gz \
+# --right ./Trimmed_Fastqs/Ae_Trimmed_2.paired.fq.gz \
+# --est_method kallisto (RSEM|eXpress|kallisto|salmon) \
+# --output_dir ~/De_novo_Assembly/Ae_alignment_output \
+# --SS_lib_type FR (RF|FR) \
+# --thread_count 4 \
+# --trinity_mode (generates gene_trans_map and uses it)(gene_trans_map contains components, genes, and isoforms) \
+# --prep_reference
+# --output_prefix kallisto (default --est_method setting)
+
+# Kallisto (Ol)
+# perl /usr/local/stow/trinityrnaseq-2.2.0/util/align_and_estimate_abundance.pl \
+# --transcripts ./Da_Ol_1_Trinity.fasta.gz \
+# --seqType fq \
+# --left ./Trimmed_Fastqs/Ol_Trimmed_1.paired.fq.gz \
+# --right ./Trimmed_Fastqs/Ol_Trimmed_2.paired.fq.gz \
+# --est_method kallisto (RSEM|eXpress|kallisto|salmon) \
+# --output_dir ~/De_novo_Assembly/Ol_alignment_output \
+# --SS_lib_type FR (RF|FR) \
+# --thread_count 4 \
+# --trinity_mode (generates gene_trans_map and uses it)(gene_trans_map contains components, genes, and isoforms) \
+# --prep_reference
+# --output_prefix kallisto (default --est_method setting)
+
+# 4) Build Gene Expression Matrices
+# In De_novo_Assembly
+# For Both Samples Together
+# perl /usr/local/stow/trinityrnaseq-2.2.0/util/abundance_estimates_to_matrix.pl \
+# --est_method kallisto \
+# --out_prefix Ae_Ol_counts \
+# --name_sample_by_basedir \
+# Ae_alignment_output/abundance.tsv \
+# Ol_alignment_output/abundance.tsv
+
+# For Ae Only
+# perl /usr/local/stow/trinityrnaseq-2.2.0/util/abundance_estimates_to_matrix.pl --est_method kallisto --out_prefix Ae_counts ~/De_novo_Assembly/Ae_alignment_output/abundance.tsv
+
+# For Ol Only
+# perl /usr/local/stow/trinityrnaseq-2.2.0/util/abundance_estimates_to_matrix.pl --est_method kallisto --out_prefix Ol_counts ~/De_novo_Assembly/Ol_alignment_output/abundance.tsv
+
+# 5) Filtering Based on Expression TPM
+# Moving data into R
+# Ae_abundance <- read.delim("../De_novo_Assembly/Ae_alignment_output/abundance.tsv")
+# Ol_abundance <- read.delim("../De_novo_Assembly/Ol_alignment_output/abundance.tsv")
+
+# abundance.tsv files subsetted to only include tpm expression values over 1
+# Ae_exptemp <- Ae_abundance[Ae_abundance$tpm >= 1,]
+# Ae_exp <- Ae_exptemp[Ae_exptemp$length <= 8000,]
+# Ol_exptemp <- Ol_abundance[Ol_abundance$tpm >= 1,]
+# Ol_exp <- Ol_exptemp[Ol_exptemp$length <= 8000,]
+
+# Extracting a list of target IDs
+# Ae_exp_ids <- data.frame(Ae_exp$target_id)
+# Ol_exp_ids <- data.frame(Ol_exp$target_id)
+
+# Moving ID lists to a file
+# write.table(Ae_exp_ids,file="../De_novo_Assembly/Ae_exp_ids",quote=FALSE,row.names=FALSE)
+# write.table(Ol_exp_ids,file="../De_novo_Assembly/Ol_exp_ids",quote=FALSE,row.names=FALSE)
+
+# Running list of expression subset against our original fasta files to filter the contigs
+# perl -ne 'if(/^>(\S+)/){$c=$i{$1}}$c?print:chomp;$i{$_}=1 if @ARGV' Ae_exp_ids Da_Ae_Trinity.fasta > Da_Trinity_Exp.fasta
+# perl -ne 'if(/^>(\S+)/){$c=$i{$1}}$c?print:chomp;$i{$_}=1 if @ARGV' Ol_exp_ids Da_Ol_1_Trinity.fasta > Da_Ol_Trinity_Exp.fasta
+
+# 6) ORF Extraction Pipeline # keep contigs with ORF 
+# (Complete and Partial Long ORFs, 200aa+) 
+# PATH=$PATH:~/bin/TransDecoder-3.0.1/
+# TransDecoder.LongOrfs -t Da_Ae_Trinity_Exp.fasta
+# TransDecoder.LongOrfs -t Da_Ol_Trinity_Exp.fasta
+
+# 7) Blastn (Nucleotide Identity) # keep contigs which are not highly identical to the ref CDS 
+# In De_novo_Assembly Directory
+
+# Brassica napus CDS File 
+# wget http://www.genoscope.cns.fr/brassicanapus/data/Brassica_napus.annotation_v5.cds.fa.gz
+# gzip -c Brassica_napus.annotation_v5.cds.fa.gz > Brassica_napus.annotation_v5.cds.fa
+
+# Generating Database from CDS File
+# makeblastdb -in ./Brassica_napus.annotation_v5.cds.fa -dbtype ‘nucl’ -input_type 'fasta' -out NapusNuc.db -title NapusNuc
+
+# Running Blastn against Brassica Napus CDS
+# For Ae
+# blastn -query ./Ae_Transdecoder/longest_orfs.cds -db /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/NapusNuc.db -max_target_seqs 1 -outfmt 6 -evalue 1e-6 -num_threads 5 -out Da_Ae_NapusNuc.out
+# For Ol
+# blastn -query ./Ol_Transdecoder/longest_orfs.cds -db /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/NapusNuc.db -max_target_seqs 1 -outfmt 6 -evalue 1e-6 -num_threads 5 -out Da_Ol_NapusNuc.out 
+
+# Filtering Percent ID >= 95%
+# Ae_Blast <- read.delim("../De_novo_Assembly/Da_Ae_NapusNuc.out",header=FALSE)
+# Ol_Blast <- read.delim("../De_novo_Assembly/Da_Ol_NapusNuc.out",header=FALSE)
+# colnames(Ae_Blast) <- c("qseqid","sseqid","pident","length","mismatch","gapopen","qstart","qend","sstart","send","evalue","bitscore")
+# colnames(Ol_Blast) <- c("qseqid","sseqid","pident","length","mismatch","gapopen","qstart","qend","sstart","send","evalue","bitscore")
+# Ae_Blast_PI <- Ae_Blast[Ae_Blast$pident>=95,]
+# Ol_Blast_PI <- Ol_Blast[Ol_Blast$pident>=95,]
+# rownames(Ae_Blast_PI) <- NULL
+# rownames(Ol_Blast_PI) <- NULL
+# write.table(Ae_Blast_PI,file="../De_novo_Assembly/Ae_Blast_PI95",quote=FALSE,row.names=FALSE)
+# write.table(Ol_Blast_PI,file="../De_novo_Assembly/Ol_Blast_PI95",quote=FALSE,row.names=FALSE)
+
+# Removing IDs with Over 95% Identity
+# IDs for the Files were Extracted via Command Line
+# Ae_orfs_ID <- read.delim("../De_novo_Assembly/Da_Ae_Trinity_Exp.fasta.transdecoder_dir/longest_orfs.cds_ID",header=FALSE,col.names="ID")
+# Ol_orfs_ID <- read.delim("../De_novo_Assembly/Da_Ol_Trinity_Exp.fasta.transdecoder_dir/longest_orfs.cds_ID",header=FALSE,col.names="ID")
+# Ae_95_ID <- read.delim("../De_novo_Assembly/Ae_Blast_PI95_ID",header=FALSE,col.names="ID")
+# Ol_95_ID <- read.delim("../De_novo_Assembly/Ol_Blast_PI95_ID",header=FALSE,col.names="ID")
+
+# Package Installs
+# install.packages("magrittr")
+# library(magrittr)
+# install.packages("dplyr") #might already be present
+# library(dplyr)
+
+# Anti_Join to Remove IDs that have a match between Orf and Blast IDs
+# Ae_orfs_95 <- Ae_orfs_ID %>%
+  # anti_join(Ae_95_ID, by = "ID")
+# Ol_orfs_95 <- Ol_orfs_ID %>%
+  # anti_join(Ol_95_ID, by = "ID")
+
+# write.table(Ae_orfs_95,file="../De_novo_Assembly/Ae_orfs_95_ID",quote=FALSE,row.names=FALSE)
+# write.table(Ol_orfs_95,file="../De_novo_Assembly/Ol_orfs_95_ID",quote=FALSE,row.names=FALSE)
+
+# Blast Identity Filtering
+# perl -ne 'if(/^>(\S+)/){$c=$i{$1}}$c?print:chomp;$i{$_}=1 if @ARGV' Ae_orfs_95_ID Ae_Transdecoder/longest_orfs.cds > ./Ae_Transdecoder/orfs_novel.cds
+# perl -ne 'if(/^>(\S+)/){$c=$i{$1}}$c?print:chomp;$i{$_}=1 if @ARGV' Ol_orfs_95_ID Ol_Transdecoder/longest_orfs.cds > ./Ol_Transdecoder/orfs_novel.cds
+### these orfs_novel.cds are the sequences which have ORF and novel compared to ref B.napus CDS, they are here: /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/Ae_Transdecoder/orfs_novel.cds & /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/Ol_Transdecoder/orfs_novel.cds 
+
+# 8) BWA-MEM Alignment ### to see whether these genes are bona fide B.napus genes and this can tell us whether contigs map to multiple position in the ref genome --> useful for removing chimera. 
+# bwa index Brassica_napus_v4.1.chromosomes.fa
+# bwa mem Brassica_napus_v4.1.chromosomes.fa ../Ae_Transdecoder/orfs_novel.cds > Ae_bwa_mem.sam
+# bwa mem Brassica_napus_v4.1.chromosomes.fa ../Ol_Transdecoder/orfs_novel.cds > Ol_bwa_mem.sam
+
+# 9) Cap3 Redundancy Filtering
+# ./run_cap3_cds.sh 
+
+# 11) Generating Unmapped Cds Files (we only want to keep plant gene, for that purpose, blastx can tell us, so if a gene doesn't have a plant hit, it will be removed)
+# From ~/De_novo_Assembly/Bwa_Mem
+# perl -ne 'if(/^>(\S+)/){$c=$i{$1}}$c?print:chomp;$i{$_}=1 if @ARGV' /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/Bwa_Mem/Ae_napus_unmapped_ID ../Ae_Transdecoder/orfs_novel.cds > ./Ae_napus_unmapped.cds
+# perl -ne 'if(/^>(\S+)/){$c=$i{$1}}$c?print:chomp;$i{$_}=1 if @ARGV' /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/Bwa_Mem/Ol_napus_unmapped_ID ../Ol_Transdecoder/orfs_novel.cds > ./Ol_napus_unmapped.cds
+
+# 12) Running Blastx Against NR database for unmapped cds   
+# blastx -query ./Ae_napus_unmapped.cds -db /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/ruijuanli/Reference/NCBI/nr/nr -max_target_seqs 1 -outfmt 6 -evalue 1e-6 -num_threads 5 -out ./Ae_unmapped.blastx.out
+
+# blastx -query ./Ol_napus_unmapped.cds -db  /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/ruijuanli/Reference/NCBI/nr/nr -max_target_seqs 1 -outfmt 6 -evalue 1e-6 -num_threads 5 -out ./Ol_unmapped.blastx.out
+
+# 13) Producing Final List of Genes
+# Removed 1 nonplant unmapped (bwa) Ol gene
+# Removed genes with no blastx hit (Ae ~100 genes, Ol ~66 genes) (Actual number of genes removed may be lower because some of the genes with blastx hits were duplicates)
+# Used our list of remaining genes from the longest_orf.cds file to extract the genes and their sequence from our original expression filtered assembly
+
+# 14) Chimera Filtering (Attempted)
+# Appended TPM abundance to our novel genes
+# Used Vsearch - only turned up 0% chimera results
+# vsearch --uchime_denovo Ae_napus_like_gene_ID_Trinity.fa --chimeras Ae_chimera.out.fa --nonchimeras Ae_nonchimera.out.fa 
+Reference and denovo Assembly
+# 1) Duplicate Removal # 9 Genes in Da-Ae ref fasta had 2 copies
+# In /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/cap3_denovo_reference
+# awk 'BEGIN{RS=">"}NR>1{sub("\n","\t"); gsub("\n",""); print RS$0}' Ae_ref_for_annotation.fa > Ae_ref_for_annotation.tab # changing to single line fasta
+# cat Ae_ref_for_annotation.tab | grep -v "ne=XLOC_091616" | sort | uniq > Ae_ref_for_annotation_final.tab # removing duplicate genes (grep -v was used because one gene has a variation in the sequence)
+# cat Ae_ref_for_annotation_final.tab | awk -F '\t' '{printf("%s\n%s\n",$1,$2);}' > Ae_ref_for_annotation_final.fa
+
+
+# 2) Combined denovo and Reference Based Novel Gene Assemblies
+# cat Ae_napus_like_gene_ID_Trinity.fa Ae_ref_for_annotation_final.fa > Ae_combined_genes.fa
+# cat Ol_napus_like_gene_ID_Trinity.fa Ol_ref_for_annotation.fa > Ol_combined_genes.fa
+
+# 3) Cap3 on Combined Assemblies (Ae and Ol separate)
+# In /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/cap3_denovo_reference
+# ./run_cap3.sh (runs Cap3 for Ae and Ol)
+
+# 4) Combined singlets and contigs for Ae and Ol, singlets and contigs are the results from cap3
+# cat Ae_combined_genes.fa.cap.contigs Ae_combined_genes.fa.cap.singlets > Ae_combined_genes.fa.cap.singlets_contigs
+# cat Ol_combined_genes.fa.cap.contigs Ol_combined_genes.fa.cap.singlets > Ol_combined_genes.fa.cap.singlets_contigs 
+
+# 5) BUSCO Transcriptome Completeness 
+# In /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/busco
+# for i in $files; do mkdir ${i}_dir; cd ${i}_dir; python3 /usr/local/stow/busco_python3/scripts/run_BUSCO.py -i ../${i} -o busco -l /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/busco/lineages/embryophyta_odb9 -m transcriptome -c 10; cd ..; done 
+# Running 5 Files in $files - Files_dir:
+# Brassica_napus.annotation_v5.cds.fa_dir (Reference)
+# C: 97.3%
+# Ae_Ol_novel_combined_genes.fa.cap.singlets_contigs_dir (Novel Genes)
+# C: 7.5%
+# Brassica_napus.annotation.novel.cds.fa_dir (Reference + Novel Genes)
+# C: 97.7%
+# Ae_combined_genes.fa.cap.singlets_contigs_dir [Not used]
+# C: 4.7%
+# Ol_combined_genes.fa.cap.singlets_contigs_dir [Not used]
+# C: 5.7%
+# Results combined into one file
+# cat *_dir/run_busco/short_summary_busco.txt | grep -v "version" | grep -v "lineage" | grep -v "reproduce" | grep -v "mode" > busco_results.txt
+# Completion increased with from 97.3% to 97.7% with the addition of the novel Ae and Ol genes 
+Structural and Functional Annotation (Dammit)
+# 1) Dammit Installation Instructions https://angus.readthedocs.io/en/2017/dammit_annotation.html
+
+# 2) Entering py3 instance environment (use this for dammit annotation)
+# . ~/py3/bin/activate
+
+# In /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/dammit/dammit_run 
+# dammit databases -h 
+# Options: Fungi, eukaryota, metazoa
+# dammit databases --install --database-dir fungi.db --busco-group fungi
+
+# 3) Located B.napus Protein Database
+# Files for Dammit run located in ./Ae_combined_genes.fa.cap.singlets_contigs.dammit and ./Ol_combined_genes.fa.cap.singlets_contigs.dammit
+
+# 4) Running Dammit
+# dammit annotate Ae_combined_genes.fa.cap.singlets_contigs --busco-group fungi --user-databases Brassica_napus.annotation_v5.pep.fa --n_threads 8
+# dammit annotate Ol_combined_genes.fa.cap.singlets_contigs --busco-group fungi --user-databases Brassica_napus.annotation_v5.pep.fa --n_threads 8
+
+# 5) Results
+# Most Useful Files: Located in /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/dammit/dammit_results
+# Ae_combined.dammit.fasta
+# Ae_combined.dammit.gff3
+# Ae_combined.dammit.stats.json
+# Ol_combined.dammit.fasta
+# Ol_combined.dammit.gff3
+# Ol_combined.dammit.stats.json
+Functional (GO) Annotation (tool: interproscan)
+# 1) Downloading and Extracting
+# wget ftp://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/5.26-65.0/interproscan-5.26-65.0-64-bit.tar.gz
+# wget ftp://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/5.26-65.0/interproscan-5.26-65.0-64-bit.tar.gz.md5
+# Check to Confirm Download:
+# md5sum -c interproscan-5.26-65.0-64-bit.tar.gz.md5
+# tar -pxvzf interproscan-5.26-65.0-*-bit.tar.gz
+
+# 2) Downloading Panther # database that interproscan uses for GO annotation, it comes seperately and won't be able to include as a ref database if don't download, there are other databases that interproscan uses and can be included without downloading. 
+# cd interproscan/data/
+# wget ftp://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/data/panther-data-12.0.tar.gz
+# wget ftp://ftp.ebi.ac.uk/pub/software/unix/iprscan/5/data/panther-data-12.0.tar.gz.md5
+# Check to Confirm Download:
+# md5sum -c panther-data-12.0.tar.gz.md5
+# tar -pxvzf panther-data-12.0.tar.gz
+
+# 3) Running Interproscan
+# In /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/interproscan/interproscan-5.26-65.0
+# Ran Ae_interproscan.sh and Ol_interproscan.sh
+# Da Ae
+# ./interproscan.sh -dp -goterms -t n -appl panther-12.0,smart-7.1,prints-42.0,pfam-31.0 -d /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/interproscan/interproscan_results/Ae_novel/$i.dir -i /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/interproscan/interproscan-5.26-65.0/Ae_split_dir/$i
+# Da Ol
+# ./interproscan.sh -dp -goterms -t n -appl panther-12.0,smart-7.1,prints-42.0,pfam-31.0 -d /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/interproscan/interproscan_results/Ol_novel/$i.dir -i /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/interproscan/interproscan-5.26-65.0/Ol_split_dir/$i
+
+# Combined Files # 
+# cat Ae_combined.plain.fasta_chunk_00000*/Ae_combined.plain.fasta_chunk_00000*.tsv > Ae_interproscan.tsv 
+# cat Ol_combined.plain.fasta_chunk_00000*/Ol_combined.plain.fasta_chunk_00000*.tsv > Ae_interproscan.tsv
+# the above are the final result from interproscan: 
+# /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/interproscan/interproscan_results/Ae_novel/
+# /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/interproscan/interproscan_results/Ol_novel/ 
+Length Distribution Figure
+# 1) Loading in Length Files
+# Ae_ref <- read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/Statistics/Lengths/Ae_ref_plain.fa.length", header = F)
+# Ol_ref <- read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/Statistics/Lengths/Ol_ref_plain.fa.length", header = F)
+# Ae_denovo <- read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/Statistics/Lengths/Ae_denovo_plain.fa.length", header = F)
+# Ol_denovo <- read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/Statistics/Lengths/Ol_denovo_plain.fa.length", header = F)
+# ref_CDS <- read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/Statistics/Lengths/Brassica_napus_length.txt", header = F)
+
+# 2) Length Distribution Function
+length.distr.calc <- function(length.data){
+   length.distr <- data.frame(range = c("<200","200-500","500-1000","1000-1500","1500-2000","2000-5000",">5000"), 
+                             Percentage = c(round(sum(length.data$V2<200)/nrow(length.data), digits = 2), round(sum(length.data$V2>=200 & length.data$V2<500)/nrow(length.data), digits = 2), round(sum(length.data$V2>=500 & length.data$V2<1000)/nrow(length.data), digits = 2),  round(sum(length.data$V2>=1000 & length.data$V2<1500)/nrow(length.data), digits = 2), round(sum(length.data$V2>=1500 & length.data$V2<2000)/nrow(length.data), digits = 2), round(sum(length.data$V2>=2000 & length.data$V2<5000)/nrow(length.data), digits = 2), round(sum(length.data$V2>=5000)/nrow(length.data), digits = 2)),
+                          Class = deparse(substitute(length.data)))
+return(length.distr)
+}
+
+length.distr<- rbind(length.distr.calc(Ae_ref), length.distr.calc(Ol_ref), length.distr.calc(Ae_denovo), length.distr.calc(Ol_denovo), length.distr.calc(ref_CDS))
+
+length.distr$range <- factor(length.distr$range, levels = c("<200","200-500","500-1000","1000-1500","1500-2000","2000-5000",">5000"))
+  
+# 3) Plotting 
+# library(ggplot2)
+# p.length.distr <- ggplot(data = length.distr)
+# p.length.distr <- p.length.distr + geom_bar(aes(x=as.factor(range), y=Percentage, fill=Class), stat = "identity")
+# p.length.distr <- p.length.distr + facet_wrap(~Class) 
+# p.length.distr <- p.length.distr + labs(list(title = "", x = "Length range", y = "Percentage"))
+# p.length.distr <- p.length.distr + theme(axis.text.x = element_text(angle = 90, size = 8))
+# p.length.distr
+N50 and Maximum Length Calculations
+# 1) Getting N50 Length
+# perl /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/Statistics/bin/trinityrnaseq-Trinity-v2.5.1/util/misc/N50.pl /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/Reference/Brassica_napus.annotation_v5.gff3.cds.fa > B.napus_N50 # 1377
+# perl /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/Statistics/bin/trinityrnaseq-Trinity-v2.5.1/util/misc/N50.pl /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/dammit/dammit_run/Ae_combined_genes.fa.cap.singlets_contigs > Ae_novel_N50 # 1297
+# perl /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/De_novo_Assembly/Statistics/bin/trinityrnaseq-Trinity-v2.5.1/util/misc/N50.pl /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/dammit/dammit_run/Ol_combined_genes.fa.cap.singlets_contigs > Ol_novel_N50 # 1337
+
+# 2) Getting Maximum Length Transcripts
+# cat Brassica_napus_length.txt | awk '{print $2}' | sort -n | tail -20 # 15231
+# cat Ae_denovo_plain.fa.length Ae_ref_plain.fa.length | awk '{print $2}' | sort -n | tail -20 # 9367
+# cat Ol_denovo_plain.fa.length Ol_ref_plain.fa.length | awk '{print $2}' | sort -n | tail -20 # 9426
+GOseq for Brassica Napus Novel Genes
+# 1) Command Line Pre-melt Steps
+# Combined tsv files from /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/interproscan/interproscan_results/Ae_novel and Ol_novel
+# cat Ae_interproscan.tsv | awk '{print $1,$NF}' | sed '/GO:/!d' | sort | uniq > Ae_GO_rough # Getting Transcript ID and GO terms
+# cat Ae_GO_rough | awk 'BEGIN{FS=" "}{print NF}' | sort | uniq -c # Finding lines with X fields (Max fields: 8)
+# cat Ae_GO_rough | sed ‘s/ /,/g’ > Ae_GO_R # Changing field separator to comma
+# nano Ae_GO_R : Added ,filler,filler,filler,filler,filler,filler # (so there are 8 columns/fields in line 1) Fixing column issues with R import
+
+# cat Ol_interproscan.tsv | awk '{print $1,$NF}' | sed '/GO:/!d' | sort | uniq > Ol_GO_rough # Getting Transcript ID and GO terms
+# cat Ol_GO_rough | awk 'BEGIN{FS=" "}{print NF}' | sort | uniq -c # Finding lines with X fields (Max fields: 8)
+# cat Ol_GO_rough | sed ‘s/ /,/g’ > Ol_GO_R # Changing field separator to comma
+# nano Ol_GO_R : Added ,filler,filler,filler,filler,filler,filler # (so there are 8 columns/fields in line 1) Fixing column issues with R import
+
+# 2) Melting
+# library(tidyverse)
+# library(reshape2)
+# Ae_interpro_rough <- read.csv("../../../assembly_parent/B.napus/interproscan/interproscan_results/Ae_novel/Ae_GO_R",header=FALSE, fill=TRUE)
+# Ol_interpro_rough <- read.csv("../../../assembly_parent/B.napus/interproscan/interproscan_results/Ol_novel/Ol_GO_R",header=FALSE,fill=TRUE)
+# dim(Ae_interpro_rough)
+# Ae_interpro_melt <- melt(Ae_interpro_rough,id.vars="V1",measure.vars=c("V2","V3","V4","V5","V6","V7","V8"))
+# Ol_interpro_melt <- melt(Ol_interpro_rough,id.vars="V1",measure.vars=c("V2","V3","V4","V5","V6","V7","V8"))
+# write.table(Ae_interpro_melt,file="../../../assembly_parent/B.napus/interproscan/interproscan_results/Ae_novel/Ae_interproscan_melt",quote=FALSE,row.names=FALSE)
+# write.table(Ol_interpro_melt,file="../../../assembly_parent/B.napus/interproscan/interproscan_results/Ol_novel/Ol_interproscan_melt",quote=FALSE,row.names=FALSE)
+
+# 3) Command Line Post Melt Formatting
+# For GO Files
+# Da-Ae
+# cat Ae_interproscan_melt | grep -v "V1 variable value" | awk '{print $1,$3}' | sort | uniq > Ae_interproscan_edit # Removing leftover melt column
+# cat Ae_interproscan_edit | sed 's/ GO:/_GO:/g' | sed 's/ filler//g' | sed 's/ //g' > Ae_interproscan_sep # Adding _ Separator for Removal of Extra ID Number
+# cat Ae_interproscan_sep | awk -F_ '{$3="";print}' | sed 's/script /script_/g' | sed 's/  / /g' > Ae_interproscan_sep_edit # Removal of Extra ID number
+# cat Ae_interproscan_sep_edit | sort | uniq > Ae_interproscan_sep_edit_final # Removing duplicate GOs for the same transcript
+# cat Ae_interproscan_sep_edit_final | grep “GO” > Ae_GOseq # Removing rows with no GO terms
+# cat Brassica_napus_GO Ae_GOseq > Ae_Brassica_GOseq # Combining Reference GO and Da-Ae GO
+# Da-Ol
+# cat Ol_interproscan_melt | grep -v "V1 variable value" | awk '{print $1,$3}' | sort | uniq > Ol_interproscan_edit # Removing leftover melt column
+# cat Ol_interproscan_edit | sed 's/ GO:/_GO:/g' | sed 's/ filler//g' | sed 's/ //g' > Ol_interproscan_sep # Adding _ Separator for Removal of Extra ID Number
+# cat Ol_interproscan_sep | awk -F_ '{$3="";print}' | sed 's/script /script_/g' | sed 's/  / /g' > Ol_interproscan_sep_edit # Removal of Extra ID number
+# cat Ol_interproscan_sep_edit | sort | uniq > Ol_interproscan_sep_edit_final # Removing duplicate GOs for the same transcript
+# cat Ol_interproscan_sep_edit_final | grep “GO” > Ol_GOseq # Removing rows with no GO terms
+# cat Brassica_napus_GO Ol_GOseq > Ol_Brassica_GOseq # Combining Reference GO and Da-Ol GO # these GO files
+
+# For Transcript Files
+# cat Ae_GOseq | awk '{print $1}' | sort | uniq > Ae_ID
+# cat Ol_GOseq | awk '{print $1}' | sort | uniq > Ol_ID
+# Using fasta from Dammit results (pre-dammit fasta also okay)
+# cat Ae_combined.dammit.fasta | awk '{print $1}' > Ae_dammit_clean.fa # Removing annotation
+# cat Ol_combined.dammit.fasta | awk '{print $1}' > Ol_dammit_clean.fa
+# perl -ne 'if(/^>(\S+)/){$c=$i{$1}}$c?print:chomp;$i{$_}=1 if @ARGV' Ae_ID Ae_dammit_clean.fa > Ae_GOseq_transcript # Subsetting for transcripts that have a GO annotation from interproscan
+# perl -ne 'if(/^>(\S+)/){$c=$i{$1}}$c?print:chomp;$i{$_}=1 if @ARGV' Ol_ID Ol_dammit_clean.fa > Ol_GOseq_transcript
+# cat Ae_GOseq_transcript Brassica_napus.annotation_v5.cds_modified.fa > Ae_Brassica_GOseq_transcript # Combining Reference and Ae transcripts
+# cat Ol_GOseq_transcript Brassica_napus.annotation_v5.cds_modified.fa > Ol_Brassica_GOseq_transcript # Combining Reference and Ol transcripts
+
+# For Novel DEgene Files (Novel ID)
+# cat Ae_ID | awk '{for (i=1;i<=1; i++) $i="\""$i"\""}1' FS=" " OFS=" " > Ae_GOseq_ID
+# cat Ol_ID | awk '{for (i=1;i<=1; i++) $i="\""$i"\""}1' FS=" " OFS=" " > Ol_GOseq_ID
+
+# [UNUSED]
+# Combining GO Terms for 1 Transcript_ID into 1 Line (Da-Ae Example)
+# awk '$1==last {printf " %s",$2,$3,$4,$5,$6,$7,$8; next} NR>1 {print "";} {last=$1; printf "%s",$0;} END{print "";}' Ae_interproscan_sep_edit_final | sed 's/  / /g' > Ae_GO_temp
+# cat Ae_GO_temp | awk '{print $1" "$2","$3","$4","$5","$6","$7","$8","$9","$10","$11","$12","$13","$14}' | sed 's/,$//;s/,$//;s/,$//;s/,$//;s/,$//;s/,$//;s/,$//;s/,$//;s/,$//;s/,$//;s/,$//;s/,$//' | grep "GO" > Ae_GO_perfect
+BnRNAseq for GO Enrichment (function)
+### Da-Ae function for BnRNAseq 
+
+####### 1) GO annotaion 
+# # ORA with GOseq (Brassica napus version)
+# library(ShortRead);library(goseq);library(GO.db);library("annotate")
+# # for ggplot heatmap
+# library(WGCNA);library(ggplot2);library(reshape2);library(scales); library (plyr)
+
+# Ae.Bn.cdna<-readDNAStringSet("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/GO_enrichment/GOseq/Ae_Brassica_GOseq_transcript")
+# head(Ae.Bn.cdna)
+# Ae.bias<-nchar(Ae.Bn.cdna)
+# names(Ae.bias)<-names(Ae.Bn.cdna)
+# length(Ae.bias) # 103337
+
+# # bias.data vector must have the same length as DEgenes vector!
+
+# # convert to list (onetime procedure)
+# Ae.Bngo<-read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/GO_enrichment/GOseq/Ae_Brassica_GOseq",header=FALSE) # read Br_GO.txt in excel and save as csv
+# head(Ae.Bngo)
+# tail(Ae.Bngo)
+#
+# Ae.Bngo.list <- tapply(as.character(Ae.Bngo$V2),Ae.Bngo$V1,c)
+# head(Ae.Bngo.list)
+# save(Ae.Bngo.list,file="/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/GO_enrichment/GOseq/Ae.Bngo.list.Rdata") # this does not work ub goseq after updating R
+# # Using manually entered categories.
+# # Calculating the p-values...
+# # 'select()' returned 1:1 mapping between keys and columns
+# Ae.Bngo.DF<-as.data.frame(Ae.Bngo.list)
+# Ae.Bngo.DF$gene<-rownames(Ae.Bngo.DF)
+# Ae.Bngo.DF[1:10,]
+# do.call(rbind.data.frame, Ae.Bngo.list)
+# Ae.Bngo.DF2<-do.call(rbind.data.frame,Ae.Bngo.list) # ????
+
+
+# load("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/GO_enrichment/GOseq/Ae.Bngo.list.Rdata")
+Ae.GOseq.Bn.ORA<-function(genelist,padjust=0.05,ontology="BP") { # return GO enrichment table, padjus, padjust=0.05
+  TF<-(names(Ae.bias) %in% genelist)*1
+  names(TF)<-names(Ae.bias)
+  pwf<-nullp(TF,bias.data=Ae.bias)
+  GO.pval <- goseq(pwf,gene2cat=Ae.Bngo.list,use_genes_without_cat=TRUE) # format became different in new goseq version (021111). Does not work (042716)
+  if(ontology=="BP") {
+    GO.pval2<-subset(GO.pval,ontology=="BP")
+  } else if(ontology=="CC") {
+    GO.pval2<-subset(GO.pval,ontology=="CC")
+  } else {
+    GO.pval2<-subset(GO.pval,ontology=="MF")
+  }
+
+  GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,method="BH")
+  if(GO.pval2$over_represented_padjust[1]>padjust) stop("no enriched GO")
+  else {
+    enriched.GO<-GO.pval2[GO.pval2$over_represented_padjust<padjust,]
+    print("enriched.GO is")
+    print(enriched.GO)
+
+    ## write Term and Definition
+    for(i in 1:dim(enriched.GO)[1]) {
+      enriched.GO$Term[i]<-Term(GOTERM[[enriched.GO[i,"category"]]])
+      enriched.GO$Definition[i]<-Definition(GOTERM[[enriched.GO[i,"category"]]])
+    }
+    return(enriched.GO)
+  }
+}
+
+### Da-Ol function for BnRNAseq 
+
+####### 1) GO annotaion 
+# # ORA with GOseq (Brassica napus version)
+# library(ShortRead);library(goseq);library(GO.db);library("annotate")
+# # for ggplot heatmap
+# library(WGCNA);library(ggplot2);library(reshape2);library(scales); library (plyr)
+
+# Ol.Bn.cdna<-readDNAStringSet("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/GO_enrichment/GOseq/Ol_Brassica_GOseq_transcript")
+# head(Ol.Bn.cdna)
+# Ol.bias<-nchar(Ol.Bn.cdna)
+# names(Ol.bias)<-names(Ol.Bn.cdna)
+# length(Ol.bias) # 103196
+
+# # bias.data vector must have the same length as DEgenes vector!
+
+# # convert to list (onetime procedure)
+# Ol.Bngo<-read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/GO_enrichment/GOseq/Ol_Brassica_GOseq",header=FALSE) # read Br_GO.txt in excel and save as csv
+# head(Ol.Bngo)
+# tail(Ol.Bngo)
+#
+# Ol.Bngo.list <- tapply(as.character(Ol.Bngo$V2),Ol.Bngo$V1,c)
+# head(Ol.Bngo.list)
+# save(Ol.Bngo.list,file="/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/GO_enrichment/GOseq/Ol.Bngo.list.Rdata") # this does not work ub goseq after updating R
+# # Using manually entered categories.
+# # Calculating the p-values...
+# # 'select()' returned 1:1 mapping between keys and columns
+# Ol.Bngo.DF<-as.data.frame(Ol.Bngo.list)
+# Ol.Bngo.DF$gene<-rownames(Ol.Bngo.DF)
+# Ol.Bngo.DF[1:10,]
+# do.call(rbind.data.frame, Ol.Bngo.list)
+# Ol.Bngo.DF2<-do.call(rbind.data.frame,Ol.Bngo.list) # ????
+
+
+# load("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/GO_enrichment/GOseq/Ol.Bngo.list.Rdata")
+Ol.GOseq.Bn.ORA<-function(genelist,padjust=0.05,ontology="BP") { # return GO enrichment table, padjus, padjust=0.05
+  TF<-(names(Ol.bias) %in% genelist)*1
+  names(TF)<-names(Ol.bias)
+  pwf<-nullp(TF,bias.data=Ol.bias)
+  GO.pval <- goseq(pwf,gene2cat=Ol.Bngo.list,use_genes_without_cat=TRUE) # format became different in new goseq version (021111). Does not work (042716)
+
+  if(ontology=="BP") {
+    GO.pval2<-subset(GO.pval,ontology=="BP")
+  } else if(ontology=="CC") {
+    GO.pval2<-subset(GO.pval,ontology=="CC")
+  } else {
+    GO.pval2<-subset(GO.pval,ontology=="MF")
+  }
+
+  GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,method="BH")
+  if(GO.pval2$over_represented_padjust[1]>padjust) stop("no enriched GO")
+  else {
+    enriched.GO<-GO.pval2[GO.pval2$over_represented_padjust<padjust,]
+    print("enriched.GO is")
+    print(enriched.GO)
+
+    ## write Term and Definition
+    for(i in 1:dim(enriched.GO)[1]) {
+      enriched.GO$Term[i]<-Term(GOTERM[[enriched.GO[i,"category"]]])
+      enriched.GO$Definition[i]<-Definition(GOTERM[[enriched.GO[i,"category"]]])
+    }
+    return(enriched.GO)
+  }
+}
+
+BnRNAseq for GO Enrichment (run)
+# library(goseq)
+
+# # Da-Ae
+# Ae.GOseq.ID <- read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/GO_enrichment/GOseq/Ae_GOseq_ID")
+# Ae.DEgene.GO.ORA.gt <- Ae.GOseq.Bn.ORA(Ae.GOseq.ID$V1)
+# class(Ae.DEgene.GO.ORA.gt)
+# Ae.DEgene.GO.ORA.gt$Term
+# write.table(Ae.DEgene.GO.ORA.gt[,c(1,2,6)],row.names=FALSE,file="../../../assembly_parent/B.napus/GO_enrichment/GOseq/Ae.DEgene.GO.ORA.gt", quote = FALSE,col.names = TRUE)
+# write.table(Ae.DEgene.GO.ORA.gt[,1:2],row.names=FALSE,file="../../../assembly_parent/B.napus/GO_enrichment/GOseq/Ae.DEgene.revigo", quote = FALSE,col.names = FALSE)
+
+# # Da-Ol
+# Ol.GOseq.ID <- read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/calenbadger/assembly_parent/B.napus/GO_enrichment/GOseq/Ol_GOseq_ID")
+# Ol.DEgene.GO.ORA.gt <- Ol.GOseq.Bn.ORA(Ol.GOseq.ID$V1)
+# class(Ol.DEgene.GO.ORA.gt)
+# Ol.DEgene.GO.ORA.gt$Term
+# write.table(Ol.DEgene.GO.ORA.gt[,c(1,2,6)],row.names=FALSE,file="../../../assembly_parent/B.napus/GO_enrichment/GOseq/Ol.DEgene.GO.ORA.gt", quote = FALSE,col.names = TRUE)
+# write.table(Ol.DEgene.GO.ORA.gt[,1:2],row.names=FALSE,file="../../../assembly_parent/B.napus/GO_enrichment/GOseq/Ol.DEgene.revigo", quote = FALSE,col.names = FALSE)
+*GO Enrichment Heatmap (visualization)
+
+# 1) Loading Necessary Functions
+library(WGCNA);library(ggplot2);library(reshape2);library(scales); library (plyr)
+
+# # Da-Ae Genotype
+Ae.DEgene.GO.ORA.gt <- Ae.GOseq.Bn.ORA(Ae.GOseq.ID$V1)
+class(Ae.DEgene.GO.ORA.gt)
+Ae.DEgene.GO.ORA.gt$Term
+
+# # Da-Ol Genotype
+# Ol.DEgene.GO.ORA.gt <- Ol.GOseq.Bn.ORA(Ol.GOseq.ID$V1)
+# class(Ol.DEgene.GO.ORA.gt)
+# Ol.DEgene.GO.ORA.gt$Term
+
+# draw heatmap for gt & gt:tissue effect genes 
+Ae.gt <- Ae.DEgene.GO.ORA.gt[,c("Term", "over_represented_padjust")] 
+# Ol.gt <- Ol.DEgene.GO.ORA.gt[,c("Term", "over_represented_padjust")]
+Ae.gt_Ol.gt <- merge(Ae.gt, Ol.gt, by="Term", all=TRUE)
+names(Ae.gt_Ol.gt)[c(2:3)] <- c("Da_Ae", "Da_Ol")
+Ae.gt_Ol.gt.melt <- melt(Ae.gt_Ol.gt)
+Ae.gt_Ol.gt.melt
+Ae.gt_Ol.gt.melt$logPvalue <- -log10(Ae.gt_Ol.gt.melt$value)
+
+# 2) Plot 
+Ae.Ol.heatmap1 <- ggplot(data = Ae.gt_Ol.gt.melt)
+Ae.Ol.heatmap1 <- Ae.Ol.heatmap1 + geom_tile(color = "black", aes(x = factor(variable), y = Term, fill=logPvalue)) + scale_fill_gradient2(low=muted("green"), high=muted("magenta")) 
+Ae.Ol.heatmap1 <- Ae.Ol.heatmap1 + labs(y = "GO Term", x="Genotype", title="B.napus Novel Genes GO Heatmap") 
+Ae.Ol.heatmap1  

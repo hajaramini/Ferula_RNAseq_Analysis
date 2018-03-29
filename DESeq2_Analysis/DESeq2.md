@@ -700,17 +700,6 @@ dev.off()
 # 170     170    1802
 ```
 
-```{r}
-#https://github.com/ctb/2017-ucdavis-igg201b/tree/master/lab9
-gene.data.LvsR <- read.csv(file="Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.LvsR.csv", row.names=1)
-#Subset the data to identify the significantly DE genes as well as those that are increased in the WT condition:
-up.genes.LvsR <-subset(gene.data.LvsR, logFC > 1)
-#I want to have the geneID of Ara for Ferula contigs, pick the best evalue for each hit of blast against Ara db
-sort -k3,3n -k1,1 -u Final_basltp_withEvalue_clean.txt > test.txt
-mv test.txt Final_basltp_bestEvalue.txt 
-
-```
-
 #save the txt file encluding gene ID with 4 cluster, I want to use this file to find go term for uniref ID to see the go enrichment
 
 ```{r}

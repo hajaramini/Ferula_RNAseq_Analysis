@@ -6,10 +6,11 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-#last version
+#last version in WGCNA_input_out/Post_WGCNA_Analysis folder
 
 ##Goal of this script is to build networks for Ferula assafoetida RNAseq data using WGCNA. Difference between this version and v3 is that in this script is run just in DAVIS facility. Just removing genes with low count reads 
 #This is the last version for Networking
+#Also check get_DEgenes_tissues_modules.sh in 
 
 ```{r}
 library(WGCNA) 

@@ -1,0 +1,117 @@
+---
+title: "GOseq_dammit_david"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# check the result of DEseq2: using DAVID to see the GO enriched of DEgenes and dammit annotation.
+
+```{r}
+#FvsL
+DAVID_FvsL <- read.csv("~/GOseq_dammit_david/GO_FvsL_DAVID.csv", header = T,stringsAsFactors = F)
+colnames(DAVID_FvsL) <- c("categoty","Term","over_represented_padjust")
+DAVID_FvsL_BP <- DAVID_FvsL[1,]
+DAVID_FvsL_CC <- DAVID_FvsL[2,]
+DAVID_FvsL_MF <- DAVID_FvsL[c(3:4),]
+#FvsR
+DAVID_FvsR <- read.csv("~/GOseq_dammit_david/GO_FvsR_DAVID.csv", header = T,stringsAsFactors = F)
+colnames(DAVID_FvsR) <- c("categoty","Term","over_represented_padjust")
+DAVID_FvsR_BP <- DAVID_FvsR[c(1:4),]
+DAVID_FvsR_CC <- DAVID_FvsR[c(5:9),]
+DAVID_FvsR_MF <- DAVID_FvsR[c(10:11),]
+#FvsS
+DAVID_FvsS <- read.csv("~/GOseq_dammit_david/GO_FvsS_DAVID.csv", header = T,stringsAsFactors = F)
+colnames(DAVID_FvsS) <- c("categoty","Term","over_represented_padjust")
+DAVID_FvsS_BP <- DAVID_FvsS[1,]
+DAVID_FvsS_MF <- DAVID_FvsS[c(2:4),]
+#LvsR
+DAVID_LvsR <- read.csv("~/GOseq_dammit_david/GO_LvsR_DAVID.csv", header = T,stringsAsFactors = F)
+colnames(DAVID_LvsR) <- c("categoty","Term","over_represented_padjust")
+DAVID_LvsR_BP <- DAVID_LvsR[c(1:5),]
+DAVID_LvsR_CC <- DAVID_LvsR[c(6:11),]
+DAVID_LvsR_MF <- DAVID_LvsR[c(12:14),]
+#SvsR
+DAVID_SvsR <- read.csv("~/GOseq_dammit_david/GO_SvsR_DAVID.csv", header = T,stringsAsFactors = F)
+colnames(DAVID_SvsR) <- c("categoty","Term","over_represented_padjust")
+DAVID_SvsR_BP <- DAVID_SvsR[1,]
+DAVID_SvsR_CC <- DAVID_SvsR[1,]
+```
+#BP figure
+```{r}
+#merge all pairwise comparision in to one figure
+
+FvsR_LvsR.gt <- merge(DAVID_FvsR_BP[,c(2:3)], DAVID_LvsR_BP[,c(2:3)], by="Term", all=TRUE)
+names(FvsR_LvsR.gt)[c(2:3)] <- c("FvsR", "LvsR")
+FvsR_LvsR_FvsS.gt <- merge(FvsR_LvsR.gt,DAVID_FvsS_BP[,c(2:3)], by="Term", all=TRUE)
+names(FvsR_LvsR_FvsS.gt)[4] <- "FvsS"
+FvsR_LvsR_FvsS_FvsL.gt <- merge(FvsR_LvsR_FvsS.gt,DAVID_FvsL_BP[,c(2:3)], by="Term",all=TRUE)
+names(FvsR_LvsR_FvsS_FvsL.gt)[5] <- "FvsL"
+FvsR_LvsR_FvsS_FvsL_SvsR.gt <- merge(FvsR_LvsR_FvsS_FvsL.gt,DAVID_SvsR_BP[,c(2:3)], by="Term",all=TRUE)
+names(FvsR_LvsR_FvsS_FvsL_SvsR.gt)[6] <- "SvsR"
+
+FvsR_LvsR_FvsS_FvsL_SvsR.gt.melt <- melt(FvsR_LvsR_FvsS_FvsL_SvsR.gt)
+FvsR_LvsR_FvsS_FvsL_SvsR.gt.melt
+FvsR_LvsR_FvsS_FvsL_SvsR.gt.melt$logPvalue <- -log10(FvsR_LvsR_FvsS_FvsL_SvsR.gt.melt$value)
+#save
+save(FvsR_LvsR_FvsS_FvsL_SvsR.gt.melt,file = "~/GOseq_dammit_david/FvsR_LvsR_FvsS_FvsL_SvsR.BP.melt.RData")
+# 2) Plot 
+FvsR_LvsR_FvsS_FvsL_SvsR.gt.melt.heatmap <- ggplot(data = FvsR_LvsR_FvsS_FvsL_SvsR.gt.melt)
+FvsR_LvsR_FvsS_FvsL_SvsR.gt.melt.heatmap <- FvsR_LvsR_FvsS_FvsL_SvsR.gt.melt.heatmap + geom_tile(color = "black", aes(x = factor(variable), y = Term, fill=logPvalue)) + scale_fill_gradient2(low=muted("green"), high=muted("magenta")) 
+FvsR_LvsR_FvsS_FvsL_SvsR.gt.melt.heatmap <- FvsR_LvsR_FvsS_FvsL_SvsR.gt.melt.heatmap + labs(y = "GO Term", x="Pairwise Comparison", title="Ferula assafoetida pairwise comparison GO Heatmap BP") 
+FvsR_LvsR_FvsS_FvsL_SvsR.gt.melt.heatmap
+ggsave("~/GOseq_b2g_input_out/FvsR_LvsR_FvsS_FvsL_SvsR_BP_DAVID.heatmap.png", width = 8, height = 8)
+```
+
+#CC figure
+```{r}
+#merge all pairwise comparision in to one figure
+
+FvsR_LvsR.gt <- merge(DAVID_FvsR_CC[,c(2:3)], DAVID_LvsR_CC[,c(2:3)], by="Term", all=TRUE)
+names(FvsR_LvsR.gt)[c(2:3)] <- c("FvsR", "LvsR")
+FvsR_LvsR_FvsL.gt <- merge(FvsR_LvsR.gt,DAVID_FvsL_CC[,c(2:3)], by="Term",all=TRUE)
+names(FvsR_LvsR_FvsL.gt)[4] <- "FvsL"
+FvsR_LvsR_FvsL_SvsR.gt <- merge(FvsR_LvsR_FvsL.gt,DAVID_SvsR_CC[,c(2:3)], by="Term",all=TRUE)
+names(FvsR_LvsR_FvsL_SvsR.gt)[5] <- "SvsR"
+
+FvsR_LvsR_FvsL_SvsR.gt.melt <- melt(FvsR_LvsR_FvsL_SvsR.gt)
+FvsR_LvsR_FvsL_SvsR.gt.melt
+FvsR_LvsR_FvsL_SvsR.gt.melt$logPvalue <- -log10(FvsR_LvsR_FvsL_SvsR.gt.melt$value)
+#save
+save(FvsR_LvsR_FvsL_SvsR.gt.melt,file = "~/GOseq_b2g_input_out/FvsR_LvsR_FvsL_SvsR.CC.melt.RData")
+# 2) Plot 
+FvsR_LvsR_FvsL_SvsR.gt.melt.heatmap <- ggplot(data = FvsR_LvsR_FvsL_SvsR.gt.melt)
+FvsR_LvsR_FvsL_SvsR.gt.melt.heatmap <- FvsR_LvsR_FvsL_SvsR.gt.melt.heatmap + geom_tile(color = "black", aes(x = factor(variable), y = Term, fill=logPvalue)) + scale_fill_gradient2(low=muted("green"), high=muted("magenta")) 
+FvsR_LvsR_FvsL_SvsR.gt.melt.heatmap <- FvsR_LvsR_FvsL_SvsR.gt.melt.heatmap+ labs(y = "GO Term", x="Pairwise Comparison", title="Ferula assafoetida pairwise comparison GO Heatmap CC") 
+FvsR_LvsR_FvsL_SvsR.gt.melt.heatmap
+ggsave("~/GOseq_dammit_david/FvsR_LvsR_FvsL_SvsR_CC_DAVID.heatmap.png", width = 8, height = 8) 
+```
+
+#MF figure
+```{r}
+#merge all pairwise comparision in to one figure
+
+FvsR_LvsR.gt <- merge(DAVID_FvsR_MF[,c(2:3)], DAVID_LvsR_MF[,c(2:3)], by="Term", all=TRUE)
+names(FvsR_LvsR.gt)[c(2:3)] <- c("FvsR", "LvsR")
+FvsR_LvsR_FvsL.gt <- merge(FvsR_LvsR.gt,DAVID_FvsL_MF[,c(2:3)], by="Term",all=TRUE)
+names(FvsR_LvsR_FvsL.gt)[4] <- "FvsL"
+FvsR_LvsR_FvsL_FvsS.gt <- merge(FvsR_LvsR_FvsL.gt,DAVID_FvsS_MF[,c(2:3)], by="Term",all=TRUE)
+names(FvsR_LvsR_FvsL_FvsS.gt)[5] <- "FvsS"
+FvsR_LvsR_FvsL_FvsS.gt.melt <- melt(FvsR_LvsR_FvsL_FvsS.gt)
+FvsR_LvsR_FvsL_FvsS.gt.melt
+FvsR_LvsR_FvsL_FvsS.gt.melt$logPvalue <- -log10(FvsR_LvsR_FvsL_FvsS.gt.melt$value)
+#save
+save(FvsR_LvsR_FvsL_FvsS.gt.melt,file = "~/GOseq_b2g_input_out/FvsR_LvsR_FvsL_FvsS.MF.melt.RData")
+# 2) Plot 
+FvsR_LvsR_FvsL_FvsS.gt.melt.heatmap <- ggplot(data = FvsR_LvsR_FvsL_FvsS.gt.melt)
+FvsR_LvsR_FvsL_FvsS.gt.melt.heatmap <- FvsR_LvsR_FvsL_FvsS.gt.melt.heatmap + geom_tile(color = "black", aes(x = factor(variable), y = Term, fill=logPvalue)) + scale_fill_gradient2(low=muted("green"), high=muted("magenta")) 
+FvsR_LvsR_FvsL_FvsS.gt.melt.heatmap <- FvsR_LvsR_FvsL_FvsS.gt.melt.heatmap+ labs(y = "GO Term", x="Pairwise Comparison", title="Ferula assafoetida pairwise comparison GO Heatmap MF") 
+FvsR_LvsR_FvsL_FvsS.gt.melt.heatmap
+ggsave("~/GOseq_dammit_david/FvsR_LvsR_FvsL_FvsS_MF_DAVID.heatmap.png", width = 8, height = 8) 
+```
+
+

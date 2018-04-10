@@ -1,0 +1,124 @@
+---
+title: "WGCNA_Edite"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# merge similar modules to check how differecne happens for GO enrichment analysis
+
+```{r}
+#all tissues
+#Calculate eigengenes
+#load("dataInput_v4.RData")
+MEList <- moduleEigengenes(datExpr0tissues, colors = dynamicColors) # Calculates module eigengenes (1st principal component) of modules in a given single dataset. 
+MEs <- MEList$eigengenes
+# Calculate dissimilarity of module eigengenes
+MEDiss <- 1-cor(MEs);
+# merge with correlation > 0.7
+MEDissThres = 0.3
+merge = mergeCloseModules(datExpr0tissues, dynamicColors, cutHeight = MEDissThres, verbose = 3) 
+mergedColors = merge$colors
+# Eigengenes of the new merged modules:
+mergedMEs = merge$newMEs 
+# Rename to moduleColors
+moduleColors = mergedColors
+# Construct numerical labels corresponding to the colors
+colorOrder = c("grey", standardColors(50));
+moduleLabels = match(moduleColors, colorOrder)-1; #26 modules
+moduleNumber <- merge$colors #for know about each gene's module number
+table (moduleNumber)  %>% length()
+#[1] 26
+write.table(moduleNumber,file = "~/WGCNA_input_out/moduleNumber_MEDissThres0.3.txt")
+MEs = mergedMEs
+save(MEs,moduleColors,moduleNumber, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/WGCNA_input_out/MEs_all_tissues_Davis_MEDissThres0.3.Rdata")
+write.table(moduleNumber,file = "~/WGCNA_input_out/Post_WGCNA_Analysis/moduleNumber_MEDissThres0.3.txt")
+```
+
+#preparing the input file for GO enrichment analysis
+
+```{r}
+module_genesID_MEDissThres0.3 <- colnames(datExpr0tissues)
+write.table(module_genesID_MEDissThres0.3,file = "~/WGCNA_input_out/Post_WGCNA_Analysis/module_genesID_MEDissThres0.3.txt")
+# tail -27694 module_genesID_MEDissThres0.3.txt > module_genesID_MEDissThres0.3.txt2
+#sort based on the string not numeric so use -k1,1 without n
+# cat module_genesID_MEDissThres0.3.txt2 | sort -k1,1 > module_genesID_MEDissThres0.3_sort.txt2
+# cat moduleNumber_MEDissThres0.3.txt | sort -k1,1 > moduleNumber_MEDissThres0.3_sort.txt 
+# join -1 1 -2 1 module_genesID_MEDissThres0.3_sort.txt2 moduleNumber_MEDissThres0.3_sort.txt > module_geneID_number_MEDissThres0.3.txt
+#cat module_geneID_number_MEDissThres0.3.txt | sort -k3,3 | less | awk '{print $3}' | uniq | sed "s/\"//g" | awk '{print "grep -w "$1" module_geneID_number_MEDissThres0.3.txt > "$1".ModuleSelected.genesID_number_MEDissThres0.3.txt"}' > Batch_Pick_Modules_MEDissThres0.3
+#wc Batch_Pick_Modules_MEDissThres0.3 #26
+# chmod +x Batch_Pick_Modules_MEDissThres0.3
+# can check the Batch with nano
+# ./Batch_Pick_Modules_MEDissThres0.3  
+# Get 26 output, we have 26 modules based on table(moduleNumber), check how many genes are located in each module to make sure everything run OK
+#violet.genesID.v2 <- read.table("~/WGCNA_input_out/Post_WGCNA_Analysis/violet.ModuleSelected.genesID_number_MEDissThres0.3.txt")
+# violet.genesID$V2 #235
+```
+
+#GOseq enrichment analysis for 26 modules
+#run GO function for 26 modules,specify genelist for each of them
+
+```{r}
+#ls *ModuleSelected.genesID_number_MEDissThres0.3.txt > file_list_MEDissThres0.3.txt
+#wc file_list_MEDissThres0.3.txt #26
+files <- unlist(read.delim("~/WGCNA_input_out/Post_WGCNA_Analysis/file_list_MEDissThres0.3.txt", stringsAsFactors = F))
+for (module in files){
+  name <- paste0("~/WGCNA_input_out/Post_WGCNA_Analysis/", module)
+  color <- sub("\\..*","", module)
+  cat("Color is", color, "\n")
+  module.genesID <- read.table(name, stringsAsFactors = F)
+  genelist <- module.genesID$V2
+  over_enriched <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist))
+  if(class(over_enriched) != "try-error"){
+    write.table(over_enriched[,c(1,2,6)],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.MEDissThres0.3",color), quote = FALSE,col.names = TRUE)
+    write.table(over_enriched[,1:2],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.MEDissThres0.3.revigo.", color), quote = FALSE,col.names = FALSE)
+  }
+}
+
+violet.genesID <- read.table("~/WGCNA_input_out/Post_WGCNA_Analysis/violet.ModuleSelected.genesID_number.txt", stringsAsFactors = F)
+genelist <- violet.genesID$V2 
+Drap_Oases_Plant6.GO.ORA.gt.violet <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist)) #no enriched GO
+Drap_Oases_Plant6.gt.violet<- Drap_Oases_Plant6.GO.ORA.gt.violet[,c("Term", "over_represented_padjust")]
+
+write.table(Drap_Oases_Plant6.GO.ORA.gt.violet[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.violet", quote = FALSE,c)
+write.table(Drap_Oases_Plant6.GO.ORA.gt.violet[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.violet", quote = FALSE,col.names = FALSE)
+#for loop????
+```
+
+```{r}
+datME=moduleEigengenes(datExpr0tissues,moduleColors)$eigengenes  # same as a MEs, so in signedKME function use MEs instead of datME
+datKME=signedKME(datExpr0tissues, MEs, outputColumnName="MM.")
+datKME %>% dim() #27694  44
+# Display the first few rows of the data frame
+head(datKME)
+#run FilterGenes for each modules separetaly
+#FilterGenes= abs(GS1)> .2 & abs(datKME$MM.brown)>.8
+FilterGenes.palevioletred3 <- abs(datKME$MM.palevioletred3) >.8 #got FALSE & TRUE
+table(FilterGenes.palevioletred3)
+#FilterGenes.palevioletred3
+#FALSE  TRUE 
+#27381    313 
+FilterGenes.turquoise <- abs(datKME$MM.turquoise) >.8
+table(FilterGenes.turquoise)
+#FALSE  TRUE 
+#25163 2531
+#NOW important to know Which genes were filtered in?
+MEturquoise.small <- dimnames(data.frame(datExpr0tissues))[[2]][FilterGenes.turquoise]
+head(MEturquoise.small)
+save(MEturquoise.small,file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEturquoise_for_GO.csv", row.names =F, col.names = F, quote = F)
+
+#try for black module with 4180 genes
+#run FilterGenes for each modules separetaly
+#FilterGenes= abs(GS1)> .2 & abs(datKME$MM.brown)>.8
+FilterGenes.black <- abs(datKME$MM.black) >.8 #got FALSE & TRUE
+table(FilterGenes.black)
+#FALSE  TRUE 
+#25997  1697  
+#NOW important to know Which genes were filtered in?
+MEblack.small <- dimnames(data.frame(datExpr0tissues))[[2]][FilterGenes.black]
+head(MEblack.small)
+save(MEblack.small,file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEblack_for_GO.csv", row.names =F, col.names = F, quote = F)
+```
+

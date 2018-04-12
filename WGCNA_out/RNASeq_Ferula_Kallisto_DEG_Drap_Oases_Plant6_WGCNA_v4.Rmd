@@ -190,29 +190,16 @@ dev.off();
 ```{r}
 softPower = 10
 adjacency = adjacency(datExpr0tissues,power=softPower,type="signed");
-adjacency = adjacency(datExpr0tissues,power=softPower,type="signed hybrid")
-#picked signed based on the WGCNA suggestion. prefer signed vs unsigned softPower = 12
 TOM <- TOMsimilarity(adjacency);
-range(TOM)
-#[1] 5.936791e-36 1.000000e+00
-dissTOM <- 1-TOM
-range(dissTOM)
-#[1] 0 1 dissTOM for signed hybrid
 dim(adjacency) #  27694 27694
 diag(adjacency)=0
 dissTOM   = 1-TOMsimilarity(adjacency, TOMType="signed")
 dim(dissTOM) #27694 27694
-range(dissTOM)
+#range(dissTOM)
 #[1] 0.0000000 0.9999886 dissTOM for signed
 save(adjacency, file = "adjacency.Davis.RData")
 save(dissTOM, file = "dissTOM.Davis.Rdata")
-save(adjacency, file = "~/WGCNA_input_out/adjacency.Davis.hybrid.RData")
-save(TOM, file = "~/WGCNA_input_out/TOM.Davis.hybrid.RData")
-save(adjacency, file = "~/WGCNA_input_out/adjacency.Davis.hybrid.RData")
-save(dissTOM, file = "~/WGCNA_input_out/dissTOM.Davis.hybrid.Rdata")
-save()
 ```
-
 
 ```{r}
 #all tissues
@@ -547,9 +534,10 @@ dev.off()
 #Figure: Barplot of module significance defined as the mean gene significance across all genes in the module. The ... and ... modules are the most promising.
 ```
 
+#find DEgene's module number
+
 ```{r}
 #start to downstream analysis
-#find DEgene's module number
 mkdir Post_WGCNA_Analysis, then cp moduleNumber.txt to find each DEgenes's module number
 module_genesID<- colnames(datExpr0tissues)
 write.table(module_genesID,file = "~/Ferula_RNAseq_Analysis/WGCNA_out/Post_WGCNA_Analysis/module_genesID.txt")

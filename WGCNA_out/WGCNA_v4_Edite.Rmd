@@ -61,9 +61,9 @@ write.table(module_genesID_MEDissThres0.3,file = "~/WGCNA_input_out/Post_WGCNA_A
 #run GO function for 26 modules,specify genelist for each of them
 
 ```{r}
-#ls *ModuleSelected.genesID_number_MEDissThres0.3.txt > file_list_MEDissThres0.3.txt
+#ls *module_geneID_number_hybrid_MEDissThres0.3.txt > file_list_MEDiss_hybrid_Thres0.3.txt
 #wc file_list_MEDissThres0.3.txt #26
-files <- unlist(read.delim("~/WGCNA_input_out/Post_WGCNA_Analysis/file_list_MEDissThres0.3.txt", stringsAsFactors = F))
+files <- unlist(read.delim("~/WGCNA_input_out/Post_WGCNA_Analysis/file_list_MEDiss_hybrid_Thres0.3.txt", stringsAsFactors = F))
 for (module in files){
   name <- paste0("~/WGCNA_input_out/Post_WGCNA_Analysis/", module)
   color <- sub("\\..*","", module)
@@ -77,48 +77,227 @@ for (module in files){
   }
 }
 
-violet.genesID <- read.table("~/WGCNA_input_out/Post_WGCNA_Analysis/violet.ModuleSelected.genesID_number.txt", stringsAsFactors = F)
-genelist <- violet.genesID$V2 
-Drap_Oases_Plant6.GO.ORA.gt.violet <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist)) #no enriched GO
-Drap_Oases_Plant6.gt.violet<- Drap_Oases_Plant6.GO.ORA.gt.violet[,c("Term", "over_represented_padjust")]
+```
+#change the type from sign ti sign hybrid
+#43 modules "hybrid with dis 0.2"
 
-write.table(Drap_Oases_Plant6.GO.ORA.gt.violet[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.violet", quote = FALSE,c)
-write.table(Drap_Oases_Plant6.GO.ORA.gt.violet[,1:2],row.names=FALSE,file="~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.violet", quote = FALSE,col.names = FALSE)
-#for loop????
+```{r}
+#first pick an appropriate soft-thresholding power for network construction
+softPower = 12
+adjacency = adjacency(datExpr0tissues,power=softPower,type="signed hybrid")
+#range(TOM)
+#[1] 5.936791e-36 1.000000e+00
+dissTOM <- 1-TOM
+range(dissTOM)
+#[1] 0 1 dissTOM for signed hybrid
+save(adjacency, file = "~/WGCNA_input_out/adjacency.Davis.hybrid.RData")
+save(TOM, file = "~/WGCNA_input_out/TOM.Davis.hybrid.RData")
+save(dissTOM, file = "~/WGCNA_input_out/dissTOM.Davis.hybrid.Rdata")
 ```
 
 ```{r}
-datME=moduleEigengenes(datExpr0tissues,moduleColors)$eigengenes  # same as a MEs, so in signedKME function use MEs instead of datME
-datKME=signedKME(datExpr0tissues, MEs, outputColumnName="MM.")
-datKME %>% dim() #27694  44
-# Display the first few rows of the data frame
-head(datKME)
-#run FilterGenes for each modules separetaly
-#FilterGenes= abs(GS1)> .2 & abs(datKME$MM.brown)>.8
-FilterGenes.palevioletred3 <- abs(datKME$MM.palevioletred3) >.8 #got FALSE & TRUE
-table(FilterGenes.palevioletred3)
-#FilterGenes.palevioletred3
-#FALSE  TRUE 
-#27381    313 
-FilterGenes.turquoise <- abs(datKME$MM.turquoise) >.8
-table(FilterGenes.turquoise)
-#FALSE  TRUE 
-#25163 2531
-#NOW important to know Which genes were filtered in?
-MEturquoise.small <- dimnames(data.frame(datExpr0tissues))[[2]][FilterGenes.turquoise]
-head(MEturquoise.small)
-save(MEturquoise.small,file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEturquoise_for_GO.csv", row.names =F, col.names = F, quote = F)
+#all tissues
+#install.packages("flashClust")
+#library(flashClust)
+geneTree  = flashClust(as.dist(dissTOM), method="average")
+save(geneTree, file = "~/WGCNA_input_out/geneTree.hybrid.Rdata")
+# display the networks visually 
+sizeGrWindow(6,16)
+pdf("~/WGCNA_input_out/Plot_v4/dendrogram.hybrid.pdf",height=6,width=16)
+plot(geneTree,xlab="",sub="",main="Gene clustering on TOM-based dissimilarity", labels=FALSE,hang=0.04);
+dev.off()  #These are "good" data, since there are a lot of distinct branches
+#define modules, we will determine modules based on total data after removing batch effect
+# We like large modules, so we set the minimum module size relatively high:
+minModuleSize <- 30;
+# Module identification using dynamic tree cut:
+dynamicMods <- cutreeDynamic(dendro = geneTree, distM = dissTOM,
+                             deepSplit <- 2, pamRespectsDendro = FALSE,
+                            minClusterSize = minModuleSize);
 
-#try for black module with 4180 genes
-#run FilterGenes for each modules separetaly
-#FilterGenes= abs(GS1)> .2 & abs(datKME$MM.brown)>.8
-FilterGenes.black <- abs(datKME$MM.black) >.8 #got FALSE & TRUE
-table(FilterGenes.black)
-#FALSE  TRUE 
-#25997  1697  
-#NOW important to know Which genes were filtered in?
-MEblack.small <- dimnames(data.frame(datExpr0tissues))[[2]][FilterGenes.black]
-head(MEblack.small)
-save(MEblack.small,file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEblack_for_GO.csv", row.names =F, col.names = F, quote = F)
+table(dynamicMods)
+table(dynamicMods) %>% length() #change to 100 modules with "hybrid"
+save(dynamicMods, file = "~/WGCNA_input_out/dynamicMods.hybrid.Rdata")
+# Convert numeric lables into colors
+dynamicColors = labels2colors(dynamicMods) 
+table(dynamicColors)  %>% length() # for hybrid 100
+# Plot the dendrogram and colors CRderneath
+sizeGrWindow(8,6)
+pdf("~/WGCNA_input_out/Plot_v4/Final_modules.hybrid.pdf",height=8,width=12)
+plotDendroAndColors(geneTree, dynamicColors, "Dynamic Tree Cut",
+                    dendroLabels = FALSE, hang = 0.03,
+                    addGuide = TRUE, guideHang = 0.05,
+                    main = "Gene dendrogram and module colors")
+dev.off()
 ```
 
+# merge similar modules for hybrid
+
+```{r}
+#all tissues
+#Calculate eigengenes
+MEList <- moduleEigengenes(datExpr0tissues, colors = dynamicColors) # Calculates module eigengenes (1st principal component) of modules in a given single dataset. 
+MEs <- MEList$eigengenes
+# Calculate dissimilarity of module eigengenes
+MEDiss <- 1-cor(MEs);
+# Cluster module eigengenes
+METree <- hclust(as.dist(MEDiss), method = "average");
+# Plot the result
+sizeGrWindow(7, 6)
+plot(METree, main = "Clustering of module eigengenes",
+     xlab = "", sub = "")
+# merge with correlation > 0.8
+MEDissThres = 0.2
+# Plot the cut line into the dendrogram
+plot(METree, main = "Clustering of module eigengenes",
+     xlab = "", sub = "")
+abline(h=MEDissThres, col = "red")
+# Call an automatic merging 
+merge = mergeCloseModules(datExpr0tissues, dynamicColors, cutHeight = MEDissThres, verbose = 3) #Calculating 43 module eigengenes in given set
+# The merged module colors
+mergedColors = merge$colors
+# Eigengenes of the new merged modules:
+mergedMEs = merge$newMEs 
+# compare pre and post merge
+sizeGrWindow(12, 9)
+pdf(file = "~/WGCNA_input_out/Plot_v4/geneDendro_v2.hybrid.0.2.pdf", wi = 9, he = 6)
+plotDendroAndColors(geneTree, cbind(dynamicColors, mergedColors),
+c("Dynamic Tree Cut", "Merged dynamic"),
+dendroLabels = FALSE, hang = 0.03,
+addGuide = TRUE, guideHang = 0.05)
+dev.off() 
+# Rename to moduleColors
+moduleColors = mergedColors
+# Construct numerical labels corresponding to the colors
+colorOrder = c("grey", standardColors(50));
+moduleLabels = match(moduleColors, colorOrder)-1; #20 modules
+
+moduleNumber <- merge$colors #for know about each gene's module number
+table (moduleNumber)  %>% length()
+#[1] 43 for hybrid
+write.table(moduleNumber,file = "~/WGCNA_input_out/moduleNumber.hybrid.0.2.txt")
+MEs = mergedMEs
+save(MEs,moduleColors,moduleNumber, file = "~/WGCNA_input_out/MEs_all_tissues_Davis.hybrid.0.2.Rdata")
+
+MEDissThres = 0.3 #after merge
+write.table(moduleNumber,file = "~/WGCNA_input_out/moduleNumber.hybrid.0.3.txt") #22 modules
+save(MEs,moduleColors,moduleNumber, file = "~/WGCNA_input_out/MEs_all_tissues_Davis.hybrid.0.3.Rdata")
+```
+
+#preparing the input file for GO enrichment analysis, hybrid with DissThres0.2
+
+```{r}
+module_genesID_hybrid_MEDissThres0.2 <- colnames(datExpr0tissues)
+write.table(module_genesID_hybrid_MEDissThres0.2,file = "~/WGCNA_input_out/Post_WGCNA_Analysis/module_genesID_hybrid_MEDissThres0.2.txt")
+# tail -27694 module_genesID_hybrid_MEDissThres0.2.txt > module_genesID_hybrid_MEDissThres0.2.txt2
+#sort based on the string not numeric so use -k1,1 without n
+# cat module_genesID_hybrid_MEDissThres0.2.txt2 | sort -k1,1 > module_genesID_hybrid_MEDissThres0.2_sort.txt2
+# cat moduleNumber.hybrid.0.2.txt  | sort -k1,1 > moduleNumber.hybrid.0.2_sort.txt 
+# join -1 1 -2 1 module_genesID_hybrid_MEDissThres0.2_sort.txt2 moduleNumber.hybrid.0.2_sort.txt  > module_geneID_number_hybrid_MEDissThres0.2.txt
+# cat module_geneID_number_hybrid_MEDissThres0.2.txt | sort -k3,3 | less | awk '{print $3}' | uniq | sed "s/\"//g" | awk '{print "grep -w "$1" module_geneID_number_hybrid_MEDissThres0.2.txt > "$1".module_geneID_number_hybrid_MEDissThres0.2.txt"}' > Batch_Pick_Modules__hybrid_MEDissThres0.2
+#wc > Batch_Pick_Modules_hybrid_MEDissThres0.2 #43
+# chmod +x  Batch_Pick_Modules_hybrid_MEDissThres0.2
+# can check the Batch with nano
+# ./Batch_Pick_Modules_hybrid_MEDissThres0.2  
+# Get 43 output, we have 43 modules based on table(moduleNumber), check how many genes are located in each module to make sure everything run OK
+```
+
+#GOseq enrichment analysis for 42 modules "hybrid with dis 0.2"
+#run GO function for 43 modules,specify genelist for each of them
+
+```{r}
+#ls *.module_geneID_number_hybrid_MEDissThres0.2.txt > file_list_hybrid_MEDissThres0.2.txt
+#wc file_list_hybrid_MEDissThres0.2.txt #43
+files <- unlist(read.delim("~/WGCNA_input_out/Post_WGCNA_Analysis/file_list_hybrid_MEDissThres0.2.txt", stringsAsFactors = F))
+for (module in files){
+  name <- paste0("~/WGCNA_input_out/Post_WGCNA_Analysis/", module)
+  color <- sub("\\..*","", module)
+  cat("Color is", color, "\n")
+  module.genesID <- read.table(name, stringsAsFactors = F)
+  genelist <- module.genesID$V2
+  over_enriched <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist))
+  if(class(over_enriched) != "try-error"){
+    write.table(over_enriched[,c(1,2,6)],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.2",color), quote = FALSE,col.names = TRUE)
+    write.table(over_enriched[,1:2],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.2.revigo.", color), quote = FALSE,col.names = FALSE)
+  }
+}
+
+#ontology="CC"
+files <- unlist(read.delim("~/WGCNA_input_out/Post_WGCNA_Analysis/file_list_hybrid_MEDissThres0.2.txt", stringsAsFactors = F))
+for (module in files){
+  name <- paste0("~/WGCNA_input_out/Post_WGCNA_Analysis/", module)
+  color <- sub("\\..*","", module)
+  cat("Color is", color, "\n")
+  module.genesID <- read.table(name, stringsAsFactors = F)
+  genelist <- module.genesID$V2
+  over_enriched <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "CC"))
+  if(class(over_enriched) != "try-error"){
+    write.table(over_enriched[,c(1,2,6)],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.2.CC.",color), quote = FALSE,col.names = TRUE)
+    write.table(over_enriched[,1:2],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.2.revigo.CC.", color), quote = FALSE,col.names = FALSE)
+  }
+}
+ 
+#ontology="MF"
+files<- unlist(read.delim("~/WGCNA_input_out/Post_WGCNA_Analysis/file_list_hybrid_MEDissThres0.2.txt", stringsAsFactors = F))
+for (module in files){
+  name <- paste0("~/WGCNA_input_out/Post_WGCNA_Analysis/", module)
+  color <- sub("\\..*","", module)
+  cat("Color is", color, "\n")
+  module.genesID <- read.table(name, stringsAsFactors = F)
+  genelist <- module.genesID$V2
+  over_enriched <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "MF"))
+  if(class(over_enriched) != "try-error"){
+    write.table(over_enriched[,c(1,2,6)],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.2.MF.",color), quote = FALSE,col.names = TRUE)
+    write.table(over_enriched[,1:2],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.2.revigo.MF.", color), quote = FALSE,col.names = FALSE)
+  }
+}
+```
+
+#run script for GO enriched for _hybrid_MEDissThres0.3.txt
+
+```{r}
+ls *.module_geneID_number_hybrid_MEDissThres0.3.txt > file_list_hybrid_MEDissThres0.3.txt
+#wc 22
+files <- unlist(read.delim("~/WGCNA_input_out/Post_WGCNA_Analysis/file_list_hybrid_MEDissThres0.3.txt", stringsAsFactors = F))
+for (module in files){
+  name <- paste0("~/WGCNA_input_out/Post_WGCNA_Analysis/", module)
+  color <- sub("\\..*","", module)
+  cat("Color is", color, "\n")
+  module.genesID <- read.table(name, stringsAsFactors = F)
+  genelist <- module.genesID$V2
+  over_enriched <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist))
+  if(class(over_enriched) != "try-error"){
+    write.table(over_enriched[,c(1,2,6)],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.3",color), quote = FALSE,col.names = TRUE)
+    write.table(over_enriched[,1:2],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.3.revigo.", color), quote = FALSE,col.names = FALSE)
+  }
+}
+
+#ontology ="CC"
+files <- unlist(read.delim("~/WGCNA_input_out/Post_WGCNA_Analysis/file_list_hybrid_MEDissThres0.3.txt", stringsAsFactors = F))
+for (module in files){
+  name <- paste0("~/WGCNA_input_out/Post_WGCNA_Analysis/", module)
+  color <- sub("\\..*","", module)
+  cat("Color is", color, "\n")
+  module.genesID <- read.table(name, stringsAsFactors = F)
+  genelist <- module.genesID$V2
+  over_enriched <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "CC"))
+  if(class(over_enriched) != "try-error"){
+    write.table(over_enriched[,c(1,2,6)],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.3.CC.",color), quote = FALSE,col.names = TRUE)
+    write.table(over_enriched[,1:2],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.3.revigo.CC.", color), quote = FALSE,col.names = FALSE)
+  }
+}
+ 
+#ontology="MF"
+file<- unlist(read.delim("~/WGCNA_input_out/Post_WGCNA_Analysis/file_list_hybrid_MEDissThres0.3.txt", stringsAsFactors = F))
+for (module in files){
+  name <- paste0("~/WGCNA_input_out/Post_WGCNA_Analysis/", module)
+  color <- sub("\\..*","", module)
+  cat("Color is", color, "\n")
+  module.genesID <- read.table(name, stringsAsFactors = F)
+  genelist <- module.genesID$V2
+  over_enriched <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "MF"))
+  if(class(over_enriched) != "try-error"){
+    write.table(over_enriched[,c(1,2,6)],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.3.MF.",color), quote = FALSE,col.names = TRUE)
+    write.table(over_enriched[,1:2],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.3.revigo.MF.", color), quote = FALSE,col.names = FALSE)
+  }
+}
+```

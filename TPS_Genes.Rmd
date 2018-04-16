@@ -1,0 +1,101 @@
+---
+title: "TPS_Genes"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#To see the expression pattern for all TPS genes among different tissue
+
+```{r}
+TPS_genes <- c("oases3_k31_Locus_43830_Transcript_3_1","oases3_k43_Locus_5220_Transcript_5_1","oases3_k49_Locus_1839_Transcript_5_2","oases3_k49_Locus_2046_Transcript_4_1","oases3_k49_Locus_48413_Transcript_4_1","oases6_CL4567Contig1_3","oases6_CL5040Contig1_1","oases6_k25_Locus_16826_Transcript_4_1","oases6_k37_Locus_1803_Transcript_51_1","oases2_k31_Locus_1021_Transcript_15_1","oases6_k49_Locus_1643_Transcript_11_1","oases6_k49_Locus_26372_Transcript_1_1","oases6_k49_Locus_34185_Transcript_1_1","oases6_k49_Locus_56686_Transcript_2_1","TRINITY_DN40361_c0_g4_i2","TRINITY_DN26504_c0_g1_i1","oases3_CL17600Contig1_1","oases2_CL309Contig1_2") #length 18
+
+#checking expression pattern with raw count data form the kallisto result, used the result of mapped each tissue back into assembled transcriptome
+counts_Davis<- read.delim("~/Phylogeny_Tree/combined_counts.tsv",header = T, row.names = 1)
+
+counts_Davis.v2<- read.delim("~/combined_quant.tsv",header = T, row.names = 1)
+
+dim(counts_Davis.v2) #60134    4
+TPS_genes.counts <- counts_Davis[TPS_genes,] #dim 18 4
+rownames(TPS_genes.counts.v2) = c("FaTPS1","FaEKS","FaTTS1","FaTPS2","FaTPS3","rete","FaTTS2","FaTTS3","FaTTS4","FaTTS5","FaTTS6","FaTTS7","nne","FaTPS4","FaTPS5","FaCPS","FaTTS8","FaTTS9")
+#convert row and column for better understanding
+t.TPS_genes.counts <- as.data.frame(t(TPS_genes.counts))
+t.TPS_genes.counts$gt <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.TPS_genes.counts))
+t.TPS_genes.counts$trt <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.TPS_genes.counts))
+
+mt.TPS_genes.counts <- melt(t.TPS_genes.counts)
+mt.TPS_genes.counts 
+
+colnames(mt.TPS_genes.counts)  
+p <- ggplot(data = mt.TPS_genes.counts) + 
+  geom_point(mapping = aes(x = trt, y = value)) + 
+  facet_wrap(~ variable, nrow = 3)
+
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_TPS_genes.v2.png",width=15,height=15)
+
+
+t.TPS_genes.counts.v2 <- as.data.frame(t(TPS_genes.counts.v2))
+t.TPS_genes.counts.v2$gt <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.TPS_genes.counts.v2))
+t.TPS_genes.counts.v2$trt <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.TPS_genes.counts.v2))
+
+
+
+p <- ggplot(data = mt.TPS_genes.counts, mapping = aes(x = trt, y = value)) + 
+  geom_point(mapping = aes(color = trt)) + 
+  facet_wrap(~ variable, nrow = 3)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_TPS_genes.v3.png",width=15,height=15)
+
+
+p <- ggplot(data = TPS_genes.counts.v2, mapping = aes(x =trt, y = value, fill=trt)) + 
+  geom_bar(stat="identity") + 
+    facet_wrap(FaTPS1)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_TPS_genes.v5.png",width=10,height=8)
+
+
+```
+
+#This is for TPS phylogeny Tree, just subsetting of them
+
+```{r}
+#TPS
+TPS_genes_v2 <- c("oases3_k31_Locus_43830_Transcript_3_1","oases3_k49_Locus_2046_Transcript_4_1","oases3_k49_Locus_48413_Transcript_4_1")
+TPS_genes_v2.counts <- counts_Davis[TPS_genes_v2,] #dim 3 4
+rownames(TPS_genes_v2.counts) = c("FaTPS1","FaTPS2","FaTPS3")
+t.TPS_genes_v2.counts <- as.data.frame(t(TPS_genes_v2.counts))
+t.TPS_genes_v2.counts$gt <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.TPS_genes_v2.counts))
+t.TPS_genes_v2.counts$Tissue <-gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.TPS_genes_v2.counts))
+
+mt.TPS_genes_v2.counts <- melt(t.TPS_genes_v2.counts)
+mt.TPS_genes_v2.counts 
+
+p <- ggplot(data =mt.TPS_genes_v2.counts, mapping = aes(x =Tissue, y = value, fill=Tissue)) + 
+  geom_bar(stat="identity") + 
+    facet_wrap(~variable)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_TPS_genes_v2.png",width=8,height=3)
+```
+
+FaTPS1	FaEKS	FaTTS1	FaTPS2	FaTPS3		FaTTS2	FaTTS3	FaTTS4	FaTTS5	FaTTS6	FaTTS7		FaTPS4	FaTPS5	FaCPS	FaTTS8	FaTTS9
+
+```{r}
+#TTS genes
+TTS_genes <- c("oases6_CL5040Contig1_1","oases6_k25_Locus_16826_Transcript_4_1","oases2_k31_Locus_1021_Transcript_15_1","oases6_k49_Locus_1643_Transcript_11_1","oases2_CL309Contig1_2")
+TTS_genes.counts <- counts_Davis[TTS_genes,] #dim 5 4
+rownames(TTS_genes.counts) = c("FaTTS2","FaTTS3","FaTTS5","FaTTS6","FaTTS9")
+t.TTS_genes.counts <- as.data.frame(t(TTS_genes.counts))
+t.TTS_genes.counts$gt <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.TTS_genes.counts))
+t.TTS_genes.counts$Tissue <-gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.TTS_genes.counts))
+
+mt.TTS_genes.counts <- melt(t.TTS_genes.counts)
+mt.TTS_genes.counts 
+
+p <- ggplot(data =mt.TTS_genes.counts, mapping = aes(x =Tissue, y = value, fill=Tissue)) + 
+  geom_bar(stat="identity") + 
+    facet_wrap(~variable)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_TTS_genes_v2.png",width=8,height=4)
+```
+
+```{r}
+fit <-lm(counts_Davis.v2$Filtered_Flower_Davis ~ counts_Davis$Flower)
+```

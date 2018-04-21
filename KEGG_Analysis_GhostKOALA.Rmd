@@ -1,9 +1,53 @@
 ---
-title: "KEGG_Analysis_GhostKOALA"
+title: "KEGG_Analysis_v2"
 output: html_document
 ---
-#copy and paste from jetstream server
-#result are in /share/malooflab/Hajar/Annotation
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#general functions
+
+```{r}
+library(reshape2)
+#Vlookup in R (https://gist.github.com/jnmaloof/7367450)
+#Version 0.3 November 12, 2013
+#Return senesical results if return column is a factor
+#Version 0.2 November 11, 2013
+#Require first column of table to be numeric if range lookup is being done
+#Change defaults to larger=FALSE
+#Julin Maloof
+vlookup <- function(ref, #the value or values that you want to look for
+                    table, #the table where you want to look for it; will look in first column
+                    column, #the column that you want the return data to come from,
+                    range=FALSE, #if there is not an exact match, return the closest?
+                    larger=FALSE) #if doing a range lookup, should the smaller or larger key be used?)
+{
+  if(!is.numeric(column) & !column %in% colnames(table)) {
+    stop(paste("can't find column",column,"in table"))
+  }
+  if(range) {
+    if(!is.numeric(table[,1])) {
+      stop(paste("The first column of table must be numeric when using range lookup"))
+    }
+    table <- table[order(table[,1]),] 
+    index <- findInterval(ref,table[,1])
+    if(larger) {
+      index <- ifelse(ref %in% table[,1],index,index+1)
+    }
+    output <- table[index,column]
+    output[!index <= dim(table)[1]] <- NA
+    
+  } else {
+    output <- table[match(ref,table[,1]),column]
+    output[!ref %in% table[,1]] <- NA #not needed?
+  }
+  dim(output) <- dim(ref)
+  output
+}
+```
+
 
 #First get KO with using GhostKOALA and blastKOALA as Kazu's suggestion
 # result save in ~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2
@@ -44,7 +88,7 @@ save(Ferula.KEGG.s.DF,file = "~/2017-ucdavis-igg201b/lab9/functional-analysis/Fe
 
 ```{r}
 # KEGG enrichment analysis for leaf vs root
-genes.LvsR <- read.csv("~/2017-ucdavis-igg201b/lab9/functional-analysis/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.LvsR.csv", row.names = 1)
+genes.LvsR <- read.csv("~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.LvsR.csv", row.names = 1)
 up.genes.LvsR <-subset(genes.LvsR, logFC > 1) #985 6
 up.genes.names.LvsR <-row.names(up.genes.LvsR)
 down.genes.LvsR <-subset(genes.LvsR, logFC < -1) #2794 6
@@ -134,8 +178,8 @@ ggplot(eKEGG.down.LvsR.DF,aes(x=sample,y=DEF)) + geom_tile(aes(fill=-log10(p.adj
 ```
 
 ```{r}
-genes.FvsR <- read.csv("~/2017-ucdavis-igg201b/lab9/functional-analysis/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsR.csv", row.names = 1) #578
-up.genes.FvsR <-subset(genes.LvsR, logFC > 1) #425 6
+genes.FvsR <- read.csv("~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsR.csv", row.names = 1) #578
+up.genes.FvsR <-subset(genes.FvsR, logFC > 1) #425 6 check this again
 up.genes.names.FvsR <-row.names(up.genes.FvsR)
 down.genes.FvsR <-subset(genes.FvsR, logFC < -1) #2794 6
 down.genes.names.FvsR <-row.names(down.genes.FvsR) #153
@@ -212,7 +256,7 @@ dev.off()
 
 ```{r}
 # KEGG enrichment analysis for flower vs stem
-genes.FvsS <- read.csv("~/2017-ucdavis-igg201b/lab9/functional-analysis/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsS.csv", row.names = 1) #493
+genes.FvsS <- read.csv("~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsS.csv", row.names = 1) #493
 up.genes.FvsS <-subset(genes.FvsS, logFC > 1) #413 5
 up.genes.names.FvsS <-row.names(up.genes.FvsS) 
 down.genes.FvsS <-subset(genes.FvsS, logFC < -1) #80 5
@@ -285,7 +329,7 @@ save(eKEGG.down.FvsS.DF, file =  "~/2017-ucdavis-igg201b/lab9/functional-analysi
 
 ```{r}
 # KEGG enrichment analysis for flower vs stem
-genes.FvsL <- read.csv("~/2017-ucdavis-igg201b/lab9/functional-analysis/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsL.csv", row.names = 1) #707
+genes.FvsL <- read.csv("~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsL.csv", row.names = 1) #707
 up.genes.FvsL <-subset(genes.FvsL, logFC > 1) #642 5
 up.genes.names.FvsL <-row.names(up.genes.FvsL) 
 down.genes.FvsL <-subset(genes.FvsL, logFC < -1) #65 5
@@ -457,17 +501,265 @@ library(pathview)
 ```
 
 ```{r}
-map.ko00909 <- pathview::pathview(gene.data  = data.frame(row.names=eKEGG.up.FvsS.DF$ID[5],value=3), # KEGG ortholog IDs are also treated as gene IDs as to handle data. 
-                     pathway.id = unlist(strsplit(eKEGG.up.FvsS.DF$pathway.id[5],split="/"))[1], 
+map.ko00909 <- pathview::pathview(gene.data  = data.frame(row.names=all$ID[c(9,27,29)],value=c(3,3,3)), # KEGG ortholog IDs are also treated as gene IDs as to handle data. 
+                     pathway.id = unlist(strsplit(all$pathway.id[c(9,27,29)],split="/"))[1], 
                      species    = "ko"# When KEGG ortholog pathway is considered, species="ko". 
                      ) # 
 
-map.ko04016 <- pathview::pathview(gene.data  = data.frame(row.names=all$ID[10],value=3), # KEGG ortholog IDs are also treated as gene IDs as to handle metagenomic data. 
-                     pathway.id = unlist(strsplit(all$pathway.id[10],split="/"))[1], 
+map.ko00909 <- pathview::pathview(gene.data  = data.frame(row.names=all$ID[9],value=3), # KEGG ortholog IDs are also treated as gene IDs as to handle metagenomic data. 
+                     pathway.id = unlist(strsplit(all$pathway.id[9],split="/"))[1], 
                      species    = "ko"
                      )# When KEGG ortholog pathway is considered, species="ko".
 
 #result is same as Kazu????
 
 ```
+
+
+```{r}
+#add pathway id  using KEGGREST package. It took three hours in jetstream server
+Ferula.KEGG.s.DF$pathway.id<-""
+for(i in 1:nrow(Ferula.KEGG.s.DF)) { 
+  if(is.na(Ferula.KEGG.s.DF$KO[i])) {next} else {
+    print(Ferula.KEGG.s.DF[i,])
+    temp<-keggGet(Ferula.KEGG.s.DF$KO[i])[[1]]$PATHWAY
+    print(temp)
+    if(is.null(temp)) {
+    Ferula.KEGG.s.DF$pathway.id[i]<-"N/A"
+    } else {
+    Ferula.KEGG.s.DF$pathway.id[i]<-paste(names(temp),collapse="/")
+    }
+  }
+}
+
+head( Ferula.KEGG.s.DF,100)
+save( Ferula.KEGG.s.DF,file="~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/Ferula.KEGG.s.DF.Rdata") #save new version 
+
+```
+
+#KEGG ORA GOseq version (using KEGG pathway id)
+```{r}
+load("~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/Ferula.KEGG.s.DF.RData") # 43452  2
+Ferula.KEGG.s.list<-as.list(tapply(Ferula.KEGG.s.DF$pathway.id,Ferula.KEGG.s.DF$gene,c)) 
+head(Ferula.KEGG.s.list)
+# how many ko (needs to know max）
+head(Ferula.KEGG.s.DF)
+Ferula.KEGG.s.DF2 <- Ferula.KEGG.s.DF %>% mutate(ko2=str_match_all(pathway.id,"/")) 
+Ferula.KEGG.s.DF2$ko2num<-""
+for(n in 1:nrow(Ferula.KEGG.s.DF2)) {
+Ferula.KEGG.s.DF2$ko2num[n]<-length(unlist(Ferula.KEGG.s.DF2[n,"ko2"])) # 
+}
+hist(as.numeric(Ferula.KEGG.s.DF2$ko2num))
+range(as.numeric(Ferula.KEGG.s.DF2$ko2num)) # 0 105
+#seperate
+Ferula.KEGG.s.DF.s<-Ferula.KEGG.s.DF %>%  filter(!is.na(pathway.id)) %>% separate(pathway.id,paste("X",1:106,sep=""),sep="/",fill="right") # how many columns needed? 107
+## 
+library(reshape2)
+FerulaKEGG.melt<-melt(as.data.frame(Ferula.KEGG.s.DF.s)[,-2],id="gene")
+FerulaKEGG.melt<-FerulaKEGG.melt[!FerulaKEGG.melt$value=="",]
+FerulaKEGG.melt<-FerulaKEGG.melt[!FerulaKEGG.melt$value=="N",]
+FerulaKEGG.melt<-FerulaKEGG.melt[!FerulaKEGG.melt$value=="A",]
+Ferula.KEGG.list <- tapply(as.character(FerulaKEGG.melt$value),FerulaKEGG.melt$gene,c)
+head(Ferula.KEGG.list,100)
+save(Ferula.KEGG.list,file="~/2017-ucdavis-igg201b/lab9/functional-analysis/Ferula.KEGG.list.Rdata") # use this for GOseq
+# To create genelist for testing GOseq.Br.ORA2
+Ferula.KEGG.list.reverse <- tapply(FerulaKEGG.melt$gene,as.character(FerulaKEGG.melt$value),c)
+Ferula.KEGG.list.reverse[1:10]
+ko00010.genelist<-Ferula.KEGG.list.reverse$ko00010[1:100] # When I use this gene list, enriched ko should include ko00010.
+library(ShortRead);library(goseq);library(GO.db);library("annotate");library(KEGGREST)
+#for ggplot heatmap
+#library(WGCNA);library(ggplot2);library(reshape2);library(scales)
+Ferula_cdna<-readDNAStringSet("~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/Drap_Oases_Plant6_No_Whitespace.fasta") 
+head(Ferula_cdna)
+bias<-nchar(Ferula_cdna)
+names(bias)<-names(Ferula_cdna)
+length(bias) # 60134
+#  bias.data vector must have the same length as DEgenes vector!
+GOseq.Ferula.ORA2<-function(genelist,custom.category.list=Ferula.KEGG.list, padjust=0.05,ontology="KEGG") { # return GO enrichment table, padjus, pjust=0.05, ontology (either "BP","CC","MF", or "KEGG"), custom.category.list is either Brgo.list (for GO), Ferula.KEGG.list (for KEGG), or 
+    TF<-(names(bias) %in% genelist)*1
+    names(TF)<-names(bias)
+    #print(TF)
+    pwf<-nullp(TF,bias.data=bias)
+    #print(pwf$DEgenes)
+    GO.pval <- goseq(pwf,gene2cat=custom.category.list,use_genes_without_cat=TRUE) 
+    #GO.pval <- goseq(pwf,gene2cat=Brgo.DF3,use_genes_without_cat=TRUE) 
+    #head(GO.pval) 
+  if(ontology=="BP") {
+    GO.pval2<-subset(GO.pval,ontology=="BP")
+  } else if(ontology=="CC") {
+    GO.pval2<-subset(GO.pval,ontology=="CC")
+  } else if(ontology=="MF") {
+    GO.pval2<-subset(GO.pval,ontology=="MF")
+  } else if(ontology=="KEGG") {
+    GO.pval2=GO.pval
+  }
+
+GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,method="BH")
+  print("GO.pval2 is")
+  print(GO.pval2)
+  if(GO.pval2$over_represented_padjust[1]>padjust) return("no enriched GO")
+  else {
+    enriched.GO<-GO.pval2[GO.pval2$over_represented_padjust<padjust,] 
+    print("enriched.GO is")
+    print(enriched.GO)
+    
+    ## write GO Term and Definition 
+    if(ontology=="KEGG") { # does this work?
+      enriched.KEGG<-enriched.GO
+      for(i in 1:dim(enriched.KEGG)[1]) {
+        # find Term & KO spread sheet
+        enriched.KEGG$Term[i]<-keggGet(enriched.KEGG[i,"category"])[[1]]$NAME
+      }
+      return(enriched.KEGG)
+      
+    } else {
+    for(i in 1:dim(enriched.GO)[1]) {
+      enriched.GO$Term[i]<-Term(GOTERM[[enriched.GO[i,"category"]]])
+      enriched.GO$Definition[i]<-Definition(GOTERM[[enriched.GO[i,"category"]]])
+    }
+      
+    return(enriched.GO)
+    }
+  }
+}
+
+# test
+GOseq.Ferula.ORA2(ko00010.genelist) # should have "ko00010". OK worked.
+```
+
+#using GOseq.Ferula.ORA2
+
+```{r}
+genes.FvsR.up<-subset(genes.FvsR, logFC > 0) # 425
+genes.FvsR.up.names <-row.names(genes.FvsR.up)
+genes.FvsR.down<-subset(genes.FvsR, logFC < 0) # 153
+genes.FvsR.down.names <-row.names(genes.FvsR.down)
+# GOseq for F vs R up
+    GO.ORA.temp.FvsR.up<-GOseq.Ferula.ORA2(unique(genes.FvsR.up.names))
+    GO.ORA.temp.FvsR.up$sample<-"Flower vs Root"
+    GO.ORA.temp.FvsR.up$FC<-"up"
+    save(GO.ORA.temp.FvsR.up,file = "~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/GOseq.KEGG.FvsR.up.enrich.RData")
+    # GOseq for F vs R down
+    GO.ORA.temp.FvsR.down<-GOseq.Ferula.ORA2(unique(genes.FvsR.down.names)) "no enriched GO"
+  
+genes.LvsR.up<-subset(genes.LvsR, logFC > 0) # 985
+genes.LvsR.up.names <-row.names(genes.LvsR.up)
+genes.LvsR.down<-subset(genes.LvsR, logFC < 0) # 2794
+genes.LvsR.down.names <-row.names(genes.LvsR.down)
+# GOseq for L vs R up
+    GO.ORA.temp.LvsR.up<-GOseq.Ferula.ORA2(unique(genes.LvsR.up.names))
+    GO.ORA.temp.LvsR.up$sample<-"Leaf vs Root"
+    GO.ORA.temp.LvsR.up$FC<-"up"
+    save(GO.ORA.temp.LvsR.up,file = "~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/GOseq.KEGG.LvsR.up.enrich.RData")
+    # GOseq for L vs R down
+    GO.ORA.temp.LvsR.down<-GOseq.Ferula.ORA2(unique(genes.LvsR.down.names)) #"no enriched GO"
+
+genes.FvsS.up<-subset(genes.FvsS, logFC > 0) # 413
+genes.FvsS.up.names <-row.names(genes.FvsS.up)
+genes.FvsS.down<-subset(genes.FvsS, logFC < 0) # 80
+genes.FvsS.down.names <-row.names(genes.FvsS.down)
+# GOseq for F vs S up
+    GO.ORA.temp.FvsS.up<-GOseq.Ferula.ORA2(unique(genes.FvsS.up.names))
+    GO.ORA.temp.FvsS.up$sample<-"Flower vs Stem"
+    GO.ORA.temp.FvsS.up$FC<-"up"
+    save(GO.ORA.temp.FvsS.up,file = "~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/GOseq.KEGG.FvsS.up.enrich.RData")
+    # GOseq for F vs S down
+    GO.ORA.temp.FvsS.down<-GOseq.Ferula.ORA2(unique(genes.FvsS.down.names)) # "no enriched GO"
+
+genes.FvsL.up<-subset(genes.FvsL, logFC > 0) # 642 
+genes.FvsL.up.names<-row.names(genes.FvsL.up)
+genes.FvsL.down<-subset(genes.FvsL, logFC < 0) #65
+genes.FvsL.down.names<-row.names(genes.FvsL.down)
+  # GOseq for F vs L up
+    GO.ORA.temp.FvsL.up<-GOseq.Ferula.ORA2(unique(genes.FvsL.up.names))
+    GO.ORA.temp.FvsL.up$sample<-"Flower vs Leaf"
+    GO.ORA.temp.FvsL.up$FC<-"up"
+    save(GO.ORA.temp.FvsL.up,file = "~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/GOseq.KEGG.FvsL.up.enrich.RData")
+    # GOseq for F vs L up
+    GO.ORA.temp.FvsL.down<-GOseq.Ferula.ORA2(unique(genes.FvsL.down.names)) #"no enriched GO"
+    
+```
+
+#visualize GOseq ORA
+
+```{r}
+eGOseqs<-list.files(pattern="GOseq.KEGG.(FvsR|FvsL|LvsR|FvsS)",path="~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2")
+#combine
+eGOseqs.list2<-sapply(paste("~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/",eGOseqs,sep=""),function(x) mget(load(x))) # mget will return the value of the object(or objects) in a list. see https://stackoverflow.com/questions/29398630/load-data-frames-into-list
+#chech the lenght of eGOseqs.list2 for each file to be sure  this code is run correctely
+names(eGOseqs.list2)
+eGOseqs.list2.summary<-do.call("rbind",eGOseqs.list2) 
+head(eGOseqs.list2.summary) # make sure those are file names
+rownames(eGOseqs.list2.summary)<-1:nrow(eGOseqs.list2.summary)
+View(eGOseqs.list2.summary)
+# eKEGGs.list2.summary (more than three genes in each KO)
+eGOseqs.list2.summary<-eGOseqs.list2.summary[eGOseqs.list2.summary$numDEInCat>3,]
+# how to cluster GO Ontology according to this pattern?
+## using hclust to sort?
+GO.list<-unique(eGOseqs.list2.summary$category);sample.list<-unique(eGOseqs.list2.summary$sample)
+df<-as.data.frame(matrix(rep(0,length(GO.list)*length(sample.list)),nrow=length(GO.list),ncol=length(sample.list)))
+names(df)<-c(paste(sample.list,"UP",sep = "_"))
+df$category<-GO.list
+for(n in 1:4) {
+df[,paste(sample.list[n],"UP",sep="_")]<-vlookup(df[,"category"],eGOseqs.list2.summary[eGOseqs.list2.summary$sample==sample.list[n]&eGOseqs.list2.summary$FC=="up",c("category","over_represented_padjust")],2)
+}
+# View(df)
+df[df<1e-10]<-1e-10 # to avoid "Inf" after log10 transformation
+df[,1:4]<- -log10(df[,1:4])
+df[is.na(df)]<-1
+hc<-stats::hclust(dist(df), "ave")
+hc$order
+# plot
+library(scales)
+eGOseqs.list2.summary$FC<-factor(eGOseqs.list2.summary$FC,level=("up"))
+term.ordered<-vlookup(df[hc$order,"category"],eGOseqs.list2.summary[,c("category","Term")],2)
+eGOseqs.list2.summary$Term<-factor(eGOseqs.list2.summary$Term,levels=term.ordered)
+# factor(ID,levels=df[hc$order,"ID"])
+GOseq.plot<-ggplot(eGOseqs.list2.summary,aes(x=sample,y=Term)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="black") + facet_grid(~FC) + scale_fill_gradient2(limits=c(0,10),low=muted("green"), high=muted("magenta")) # OK
+GOseq.plot<-GOseq.plot+     theme(axis.text.x=element_text(size=10,angle=90),
+          axis.text.y=element_text(size=10),
+          axis.title=element_text(size=10),
+          axis.ticks = element_blank(),
+          panel.background = element_rect(fill = "white",colour="black"),
+          plot.title=element_text(size=20),
+          axis.line=element_blank())
+ggsave(GOseq.plot,file="~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/GOseq.plot.png",height=8,width=8)
+ggsave(GOseq.plot,file="~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/GOseq.plot.pdf",height=8,width=8)
+save(eGOseqs.list2.summary,file="~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/KEGG.eGOseqs.list2.summary.Rdata")
+
+```
+
+#KEGG pathway map using pathview package
+
+```{r}
+load("~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/Ferula.KEGG.s.DF.Rdata") #use new version NOT previous one 
+load("~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/KEGG.eGOseqs.list2.summary.Rdata")
+eGOseqs.list2.summary
+eGOseqs.list2.summary<-eGOseqs.list2.summary %>% filter(!category %in% c("ko01100","ko01110"))
+eGOseqs.list2.summary
+eGOseqs.list2.summary %>% filter(category %in% c("ko01100","ko01110"))
+# Get KEGG Ontology for enriched pathways in DEGs
+for(m in unique(eGOseqs.list2.summary$sample)){
+library(dplyr)
+#genelist.up<-get(m) %>% rownames_to_column() %>%  dplyr::filter(logFC>0) 
+# enriched category (up)
+eGOseqs.list2.summary.s<-eGOseqs.list2.summary %>% filter(sample==m,FC=="up") # for up
+# find KOs with a given pathway category (pathway.id) enriched
+for(x in 1:nrow(eGOseqs.list2.summary.s)) {
+enriched.genelist<-Ferula.KEGG.s.DF %>% filter (gene %in% genes.FvsS.up.names) %>% filter(pathway.id %in% str_match(pathway.id,eGOseqs.list2.summary.s[x,"category"]))
+library(pathview)
+map <- pathview::pathview(gene.data  = data.frame(row.names=unique(enriched.genelist$KO),value=rep(3,length(unique(enriched.genelist$KO)))), # KEGG ortholog IDs are also treated as gene IDs as to handle metagenomic data. 
+                     pathway.id =enriched.genelist$pathway.id[1], 
+                     species= "ko" # When KEGG ortholog pathway is considered, species="ko". 
+                     #pathway.name=unite(eGOseqs.list2.summary.s[x,c("sample","FC","category")],sep="_")
+                     ) 
+                     
+list.files(pattern=paste(enriched.genelist$pathway.id[1],".pathview.png",sep=""))
+old.file.name<-paste(enriched.genelist$pathway.id[1],".pathview.png",sep="")
+new.file.name<-paste(unite(eGOseqs.list2.summary.s[x,c("sample","FC")]),old.file.name,sep="_")
+
+}
+
+```
+
 

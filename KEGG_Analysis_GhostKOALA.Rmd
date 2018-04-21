@@ -571,15 +571,17 @@ library(ShortRead);library(goseq);library(GO.db);library("annotate");library(KEG
 #library(WGCNA);library(ggplot2);library(reshape2);library(scales)
 Ferula_cdna<-readDNAStringSet("~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/Drap_Oases_Plant6_No_Whitespace.fasta") 
 head(Ferula_cdna)
-bias<-nchar(Ferula_cdna)
-names(bias)<-names(Ferula_cdna)
-length(bias) # 60134
+Ferula_bias<-nchar(Ferula_cdna)
+names(Ferula_bias)<-names(Ferula_cdna)
+length(Ferula_bias) # 60134
 #  bias.data vector must have the same length as DEgenes vector!
-GOseq.Ferula.ORA2<-function(genelist,custom.category.list=Ferula.KEGG.list, padjust=0.05,ontology="KEGG") { # return GO enrichment table, padjus, pjust=0.05, ontology (either "BP","CC","MF", or "KEGG"), custom.category.list is either Brgo.list (for GO), Ferula.KEGG.list (for KEGG), or 
-    TF<-(names(bias) %in% genelist)*1
-    names(TF)<-names(bias)
+GOseq.Ferula.ORA2<-function(genelist,custom.category.list=Ferula.KEGG.list, padjust=0.05,ontology="KEGG", bias =Ferula_bias) { # return GO enrichment table, padjus, pjust=0.05, ontology (either "BP","CC","MF", or "KEGG"), custom.category.list is either Brgo.list (for GO), Ferula.KEGG.list (for KEGG), or 
+    Ferula_bias.KEGG<-bias[names(bias) %in% names(Ferula.KEGG.list)]
+    TF<-(names(Ferula_bias) %in% genelist)*1
+    names(TF)<-names(Ferula_bias.KEGG)
+    print(paste("Background length is ",length(Ferula_bias.KEGG),".",sep=""))
     #print(TF)
-    pwf<-nullp(TF,bias.data=bias)
+    pwf<-nullp(TF,bias.data=Ferula_bias.KEGG)
     #print(pwf$DEgenes)
     GO.pval <- goseq(pwf,gene2cat=custom.category.list,use_genes_without_cat=TRUE) 
     #GO.pval <- goseq(pwf,gene2cat=Brgo.DF3,use_genes_without_cat=TRUE) 
@@ -624,7 +626,7 @@ GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,met
 }
 
 # test
-GOseq.Ferula.ORA2(ko00010.genelist) # should have "ko00010". OK worked.
+GOseq.Ferula.ORA2(genelist = ko00010.genelist) # should have "ko00010". NOT work
 ```
 
 #using GOseq.Ferula.ORA2
@@ -664,7 +666,7 @@ genes.FvsS.down.names <-row.names(genes.FvsS.down)
     GO.ORA.temp.FvsS.up$FC<-"up"
     save(GO.ORA.temp.FvsS.up,file = "~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/GOseq.KEGG.FvsS.up.enrich.RData")
     # GOseq for F vs S down
-    GO.ORA.temp.FvsS.down<-GOseq.Ferula.ORA2(unique(genes.FvsS.down.names)) # "no enriched GO"
+  GO.ORA.temp.FvsS.down<-GOseq.Ferula.ORA2(unique(genes.FvsS.down.names)) # "no enriched GO"
 
 genes.FvsL.up<-subset(genes.FvsL, logFC > 0) # 642 
 genes.FvsL.up.names<-row.names(genes.FvsL.up)

@@ -575,17 +575,18 @@ Ferula_bias<-nchar(Ferula_cdna)
 names(Ferula_bias)<-names(Ferula_cdna)
 length(Ferula_bias) # 60134
 #  bias.data vector must have the same length as DEgenes vector!
-GOseq.Ferula.ORA2<-function(genelist,custom.category.list=Ferula.KEGG.list, padjust=0.05,ontology="KEGG", bias =Ferula_bias) { # return GO enrichment table, padjus, pjust=0.05, ontology (either "BP","CC","MF", or "KEGG"), custom.category.list is either Brgo.list (for GO), Ferula.KEGG.list (for KEGG), or 
-    Ferula_bias.KEGG<-bias[names(bias) %in% names(Ferula.KEGG.list)]
-    TF<-(names(Ferula_bias) %in% genelist)*1
-    names(TF)<-names(Ferula_bias.KEGG)
-    print(paste("Background length is ",length(Ferula_bias.KEGG),".",sep=""))
-    #print(TF)
-    pwf<-nullp(TF,bias.data=Ferula_bias.KEGG)
-    #print(pwf$DEgenes)
-    GO.pval <- goseq(pwf,gene2cat=custom.category.list,use_genes_without_cat=TRUE) 
-    #GO.pval <- goseq(pwf,gene2cat=Brgo.DF3,use_genes_without_cat=TRUE) 
-    #head(GO.pval) 
+GOseq.Ferula.ORA2<-function(genelist,custom.category.list=Ferula.KEGG.list, padjust=0.05,ontology="KEGG",bias=Ferula_bias) { # return GO enrichment table, padjus, pjust=0.05, ontology (either "BP","CC","MF", or "KEGG"), custom.category.list is either Brgo.list (for GO), Br.v2.5.KEGG.list (for KEGG), or 
+  Ferula_bias.KEGG<-bias[names(bias) %in% names(Ferula.KEGG.list)]
+  TF<-(names(Ferula_bias.KEGG) %in% genelist)*1
+  names(TF)<-names(Ferula_bias.KEGG)
+  print(paste("Background length is ",length(Ferula_bias.KEGG),".",sep=""))
+  #print(TF)
+  pwf<-nullp(TF,bias.data=Ferula_bias.KEGG)
+  #print(pwf$DEgenes)
+  GO.pval <- goseq(pwf,gene2cat=custom.category.list,use_genes_without_cat=TRUE) # format became different in new goseq version (021111). Does not work (042716)
+  #GO.pval <- goseq(pwf,gene2cat=Brgo.DF3,use_genes_without_cat=TRUE) # format became different in new goseq version (021111)
+  
+  #head(GO.pval) 
   if(ontology=="BP") {
     GO.pval2<-subset(GO.pval,ontology=="BP")
   } else if(ontology=="CC") {
@@ -595,8 +596,8 @@ GOseq.Ferula.ORA2<-function(genelist,custom.category.list=Ferula.KEGG.list, padj
   } else if(ontology=="KEGG") {
     GO.pval2=GO.pval
   }
-
-GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,method="BH")
+  
+  GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,method="BH")
   print("GO.pval2 is")
   print(GO.pval2)
   if(GO.pval2$over_represented_padjust[1]>padjust) return("no enriched GO")
@@ -615,12 +616,12 @@ GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,met
       return(enriched.KEGG)
       
     } else {
-    for(i in 1:dim(enriched.GO)[1]) {
-      enriched.GO$Term[i]<-Term(GOTERM[[enriched.GO[i,"category"]]])
-      enriched.GO$Definition[i]<-Definition(GOTERM[[enriched.GO[i,"category"]]])
-    }
+      for(i in 1:dim(enriched.GO)[1]) {
+        enriched.GO$Term[i]<-Term(GOTERM[[enriched.GO[i,"category"]]])
+        enriched.GO$Definition[i]<-Definition(GOTERM[[enriched.GO[i,"category"]]])
+      }
       
-    return(enriched.GO)
+      return(enriched.GO)
     }
   }
 }

@@ -1,0 +1,130 @@
+---
+title: "Flavonoid_Genes"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#To see the exp of flavonoid genes of tree
+
+```{r}
+Flavonoid_genes <- c("oases3_k25_Locus_11029_Transcript_9_1","oases3_k25_Locus_4163_Transcript_5_1","oases3_k37_Locus_4395_Transcript_4_1","oases3_k43_Locus_7570_Transcript_3_1","oases6_k25_Locus_30933_Transcript_3_1","TRINITY_DN75605_c0_g1_i1","oases6_k37_Locus_13492_Transcript_4_1","oases2_k37_Locus_48872_Transcript_1_1","oases3_CL10153Contig1_2","oases3_k49_Locus_9379_Transcript_12_1","oases6_k25_Locus_14487_Transcript_14_1","oases6_k37_Locus_61759_Transcript_1_1","oases2_k25_Locus_50568_Transcript_1_1","oases3_k25_Locus_15765_Transcript_6_1","oases2_k25_Locus_16219_Transcript_3_1","oases3_k43_Locus_8457_Transcript_7_1","oases6_k37_Locus_57857_Transcript_1_1","oases6_k49_Locus_12143_Transcript_7_2","oases2_k31_Locus_1941_Transcript_18_1","oases3_k43_Locus_21058_Transcript_1_1","TRINITY_DN121792_c0_g1_i1","TRINITY_DN38110_c0_g8_i1","oases2_k25_Locus_8995_Transcript_3_1")
+
+
+#checking expression pattern with raw count data form the kallisto result, used the result of mapped each tissue back into assembled transcriptome
+#counts_Davis<- read.delim("~/Phylogeny_Tree/combined_counts.tsv",header = T, row.names = 1)
+
+#To check the exp of all Flavonoid genes
+Flavonoid_genes_counts <- counts_Davis[Flavonoid_genes,] #dim 23 4
+rownames(Flavonoid_genes_counts) = c("4CL-like1","4CL-like2","4CL-like3","4CL-like4","4CL-like5","4CL-like6","C2'H","CHI-like1","CHI-like2","CHI-like3","CHI-like4","CHI-like5","CHS-like1","CHS-like2","FH-like1","FH-like2","FH-like3","FNS","PAL-like1","PAL-like2","PAL-like3","PAL-like4","PAL-like5")
+
+#convert row and column for better understanding
+t.Flavonoid_genes_counts <- as.data.frame(t(Flavonoid_genes_counts))
+t.Flavonoid_genes_counts$sample <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.Flavonoid_genes_counts))
+t.Flavonoid_genes_counts$tissue <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.Flavonoid_genes_counts))
+
+mt.Flavonoid_genes_counts <- melt(t.Flavonoid_genes_counts)
+mt.Flavonoid_genes_counts
+#visulizes
+p <- ggplot(data = mt.Flavonoid_genes_counts) + 
+  geom_point(mapping = aes(x = tissue, y = value)) + 
+  facet_wrap(~ variable, nrow = 4)
+
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_Flavonoid_genes.v1.png",width=15,height=15)
+```
+
+```{r}
+#remove genes by read count ~zero (PAL genes)
+PAL_genes <- c("PAL-like1","PAL-like4","PAL-like5")
+PAL_genes_counts<-Flavonoid_genes_counts[PAL_genes,]
+t.PAL_genes_count <- as.data.frame(t(PAL_genes_counts))
+t.PAL_genes_count$sample <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.PAL_genes_count))
+t.PAL_genes_count$Tissue <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.PAL_genes_count))
+
+mt.PAL_genes_count <- melt(t.PAL_genes_count)
+mt.PAL_genes_count <- melt(t.PAL_genes_count)
+mt.PAL_genes_count
+
+p <- ggplot(data =mt.PAL_genes_count, mapping = aes(x =Tissue, y = value, fill=Tissue)) + 
+  geom_bar(stat="identity") + 
+    facet_wrap(~variable)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_PAL_genes_v2.png",width=8,height=4)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_PAL_genes_v2.pdf",width=8,height=3)
+```
+
+
+```{r}
+#4CL-like genes
+CL_genes <- c("4CL-like2","4CL-like5")
+CL_genes_counts<-Flavonoid_genes_counts[CL_genes,]
+t.CL_genes_count <- as.data.frame(t(CL_genes_counts))
+t.CL_genes_count$sample <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.CL_genes_count))
+t.CL_genes_count$Tissue <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.CL_genes_count))
+
+mt.CL_genes_count <- melt(t.CL_genes_count)
+mt.CL_genes_count <- melt(t.CL_genes_count)
+mt.CL_genes_count
+
+p <- ggplot(data =mt.CL_genes_count, mapping = aes(x =Tissue, y = value, fill=Tissue)) + 
+  geom_bar(stat="identity") + 
+    facet_wrap(~variable)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_CL_genes_v2.png",width=6,height=4)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_CL_genes_v2.pdf",width=6,height=4)
+```
+
+```{r}
+#CHI_genes
+CHI_genes_counts<-Flavonoid_genes_counts[c("CHI-like1","CHI-like4"),]
+t.CHI_genes_count <- as.data.frame(t(CHI_genes_counts))
+t.CHI_genes_count$sample <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.CHI_genes_count))
+t.CHI_genes_count$Tissue <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.CHI_genes_count))
+
+mt.CHI_genes_count <- melt(t.CHI_genes_count)
+mt.CHI_genes_count <- melt(t.CHI_genes_count)
+mt.CHI_genes_count
+
+p <- ggplot(data =mt.CHI_genes_count, mapping = aes(x =Tissue, y = value, fill=Tissue)) + 
+  geom_bar(stat="identity") + 
+    facet_wrap(~variable)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_CHI_genes_v2.png",width=5,height=3)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_CHI_genes_v2.pdf",width=6,height=3)
+```
+
+
+```{r}
+# FH-like1_genes
+FH_genes_counts<-Flavonoid_genes_counts["FH-like1",]
+t.FH_genes_count <- as.data.frame(t(FH_genes_counts))
+t.FH_genes_count$sample <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.FH_genes_count))
+t.FH_genes_count$Tissue <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.FH_genes_count))
+
+mt.FH_genes_count <- melt(t.FH_genes_count)
+mt.FH_genes_count <- melt(t.FH_genes_count)
+mt.FH_genes_count
+
+p <- ggplot(data =mt.FH_genes_count, mapping = aes(x =Tissue, y = value, fill=Tissue)) + 
+  geom_bar(stat="identity") + 
+    facet_wrap(~variable)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_FH_genes_v2.png",width=5,height=3)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_FH_genes_v2.pdf",width=5,height=3)
+```
+
+```{r}
+# FNS-genes
+FNS_genes_counts<-Flavonoid_genes_counts["FNS",]
+t.FNS_genes_count <- as.data.frame(t(FNS_genes_counts))
+t.FNS_genes_count$sample <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.FNS_genes_count))
+t.FNS_genes_count$Tissue <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.FNS_genes_count))
+
+mt.FNS_genes_count <- melt(t.FNS_genes_count)
+mt.FNS_genes_count <- melt(t.FNS_genes_count)
+mt.FNS_genes_count
+
+p <- ggplot(data =mt.FNS_genes_count, mapping = aes(x =Tissue, y = value, fill=Tissue)) + 
+  geom_bar(stat="identity") + 
+    facet_wrap(~variable)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_FNS_genes_v2.png",width=5,height=3)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_FNS_genes_v2.pdf",width=5,height=3)
+```

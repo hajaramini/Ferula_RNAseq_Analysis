@@ -489,7 +489,7 @@ eKEGG.up.FvsL.DF$FC <- "up"
 all <- rbind(eKEGG.up.FvsR.DF,eKEGG.up.LvsR.DF,eKEGG.down.FvsR.DF,eKEGG.down.LvsR.DF,eKEGG.up.FvsL.DF,eKEGG.down.FvsL.DF,eKEGG.up.FvsS.DF,eKEGG.down.FvsS.DF )
 
 #visualize KEGG
-p <- ggplot(all ,aes(x=name,y=DEF)) + geom_tile(aes(fill=-log10(p.adjust))) + scale_fill_gradient2(low=muted("green"), high=muted("magenta")) + facet_grid(~FC)
+p <- ggplot(all ,aes(x=name,y=DEF)) + geom_tile(aes(fill=-log10(p.adjust))) + scale_fill_gradient2(low=muted("green"), high=muted("magenta"), na.value = muted("magenta"))+ facet_grid(~FC)
 ggsave(p,filename = "~/2017-ucdavis-igg201b/lab9/functional-analysis/eKEGGS.plot.png", width = 15, height = 10)
 
 ```
@@ -655,8 +655,10 @@ genes.LvsR.down.names <-row.names(genes.LvsR.down)
     GO.ORA.temp.LvsR.up$FC<-"up"
     save(GO.ORA.temp.LvsR.up,file = "~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/GOseq.KEGG.LvsR.up.enrich.RData")
     # GOseq for L vs R down
-    GO.ORA.temp.LvsR.down<-GOseq.Ferula.ORA2(unique(genes.LvsR.down.names)) #"no enriched GO"
-
+    GO.ORA.temp.LvsR.down<-GOseq.Ferula.ORA2(unique(genes.LvsR.down.names)) 
+GO.ORA.temp.LvsR.down$sample<-"Leaf vs Root"
+    GO.ORA.temp.LvsR.up$FC<-"down"
+    save(GO.ORA.temp.LvsR.down,file = "~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/GOseq.KEGG.LvsR.down.enrich.RData")
 genes.FvsS.up<-subset(genes.FvsS, logFC > 0) # 413
 genes.FvsS.up.names <-row.names(genes.FvsS.up)
 genes.FvsS.down<-subset(genes.FvsS, logFC < 0) # 80
@@ -717,8 +719,9 @@ library(scales)
 eGOseqs.list2.summary$FC<-factor(eGOseqs.list2.summary$FC,level=("up"))
 term.ordered<-vlookup(df[hc$order,"category"],eGOseqs.list2.summary[,c("category","Term")],2)
 eGOseqs.list2.summary$Term<-factor(eGOseqs.list2.summary$Term,levels=term.ordered)
+eGOseqs.list2.summary.v2 <- eGOseqs.list2.summary[-c(1:2),] #remove ko05322 & ko05034
 # factor(ID,levels=df[hc$order,"ID"])
-GOseq.plot<-ggplot(eGOseqs.list2.summary,aes(x=sample,y=Term)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="black") + facet_grid(~FC) + scale_fill_gradient2(limits=c(0,10),low=muted("green"), high=muted("magenta")) # OK
+GOseq.plot<-ggplot(eGOseqs.list2.summary.v2,aes(x=sample,y=Term)) + geom_tile(aes(fill=-log10(over_represented_padjust)),colour="black") + facet_grid(~FC) + scale_fill_gradient2(limits=c(0,10),low=muted("green"), high=muted("magenta"),na.value = muted("magenta")) # OK
 GOseq.plot<-GOseq.plot+     theme(axis.text.x=element_text(size=10,angle=90),
           axis.text.y=element_text(size=10),
           axis.title=element_text(size=10),
@@ -726,9 +729,10 @@ GOseq.plot<-GOseq.plot+     theme(axis.text.x=element_text(size=10,angle=90),
           panel.background = element_rect(fill = "white",colour="black"),
           plot.title=element_text(size=20),
           axis.line=element_blank())
-ggsave(GOseq.plot,file="~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/GOseq.plot.png",height=8,width=8)
-ggsave(GOseq.plot,file="~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/GOseq.plot.pdf",height=8,width=8)
+ggsave(GOseq.plot,file="~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/GOseq.plot.v2.png",height=5,width=8)
+ggsave(GOseq.plot,file="~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/GOseq.plot.v2.pdf",height=5,width=8)
 save(eGOseqs.list2.summary,file="~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/KEGG.eGOseqs.list2.summary.Rdata")
+save(eGOseqs.list2.summary.v2,file="~/2017-ucdavis-igg201b/lab9/functional-analysis/functional-analysis_v2/KEGG.eGOseqs.list2.summary.v2.Rdata")
 
 ```
 
@@ -747,22 +751,45 @@ library(dplyr)
 #genelist.up<-get(m) %>% rownames_to_column() %>%  dplyr::filter(logFC>0) 
 # enriched category (up)
 eGOseqs.list2.summary.s<-eGOseqs.list2.summary %>% filter(sample==m,FC=="up") # for up
+
 # find KOs with a given pathway category (pathway.id) enriched
 for(x in 1:nrow(eGOseqs.list2.summary.s)) {
-enriched.genelist<-Ferula.KEGG.s.DF %>% filter (gene %in% genes.FvsS.up.names) %>% filter(pathway.id %in% str_match(pathway.id,eGOseqs.list2.summary.s[x,"category"]))
+temp<-Ferula.KEGG.s.DF %>% filter(gene %in% genes.FvsS.up.names)
+enriched.genelist<-temp %>% filter(str_detect(temp$pathway.id,eGOseqs.list2.summary.s[x,"category"]))
+
 library(pathview)
-map <- pathview::pathview(gene.data  = data.frame(row.names=unique(enriched.genelist$KO),value=rep(3,length(unique(enriched.genelist$KO)))), # KEGG ortholog IDs are also treated as gene IDs as to handle metagenomic data. 
+map <- pathview::pathview(gene.data  = data.frame(row.names=unique(enriched.genelist$KO),value=rep(-3,length(unique(enriched.genelist$KO)))), # KEGG ortholog IDs are also treated as gene IDs as to handle metagenomic data. 
                      pathway.id =enriched.genelist$pathway.id[1], 
                      species= "ko" # When KEGG ortholog pathway is considered, species="ko". 
-                     #pathway.name=unite(eGOseqs.list2.summary.s[x,c("sample","FC","category")],sep="_")
-                     ) 
-                     
+                     )
+ 
+
+                    
 list.files(pattern=paste(enriched.genelist$pathway.id[1],".pathview.png",sep=""))
-old.file.name<-paste(enriched.genelist$pathway.id[1],".pathview.png",sep="")
+
 new.file.name<-paste(unite(eGOseqs.list2.summary.s[x,c("sample","FC")]),old.file.name,sep="_")
 
 }
+}
+```
+
+```{r}
+#check for each pairwise comparision
+#m=="Flower vs Stem"
+#x id ko
+# x= 1 ko00941 Flavonoid biosynthesis 
+#m = "Leaf vs Root"
+#m= "Flower vs Root"
+#m ="Flower vs Leaf"
+eGOseqs.list2.summary.s<-eGOseqs.list2.summary %>% filter(sample=="Flower vs Leaf",FC=="up")# for up
+#x=3 #for Sesquiterpenoid and triterpenoid biosynthesis
+#x=1 #for Flavonoid biosynthesis
+temp<-Ferula.KEGG.s.DF %>% filter(gene %in% genes.FvsL.up.names)
+enriched.genelist<-temp %>% filter(str_detect(temp$pathway.id,eGOseqs.list2.summary.s[x,"category"]))
+map <- pathview::pathview(gene.data  = data.frame(row.names=unique(enriched.genelist$KO),value=rep(-3,length(unique(enriched.genelist$KO)))), # KEGG ortholog IDs are also treated as gene IDs as to handle metagenomic data. 
+                          pathway.id ="ko00941",species= "ko")
 
 ```
+
 
 

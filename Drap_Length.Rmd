@@ -45,13 +45,26 @@ length.distr$range <- factor(length.distr$range, levels = c("<200","200-500","50
 
 ```{r}
 # library(ggplot2)
+colnames(length.distr) <- c("range","percentage","assembler")
 p.length.distr <- ggplot(data = length.distr)
-p.length.distr <- p.length.distr + geom_bar(aes(x=as.factor(range), y=Percentage, fill=Class), stat = "identity")
-p.length.distr <- p.length.distr + facet_wrap(~Class) 
-p.length.distr <- p.length.distr + labs(list(title = "", x = "Length range", y = "Percentage"))
-p.length.distr <- p.length.distr + theme(axis.text.x = element_text(angle = 90, size = 8))
+p.length.distr <- p.length.distr + geom_bar(aes(x=as.factor(range), y=percentage, fill=assembler), stat = "identity")
+p.length.distr <- p.length.distr + facet_wrap(~assembler) 
+p.length.distr <- p.length.distr + labs(list(title = "", x = "length range", y = "percentage"))
+p.length.distr <- p.length.distr + theme(axis.text.x = element_text(angle = 90, size = 14))
 p.length.distr
 ggsave(p.length.distr,file="~/length.distr_Khmer_Trinity_Oases.png",width=8,height=5)
 )
+```
+
+```{r}
+#STAR result
+p.star <- ggplot(star, aes(tissue, uniquely.mapped.reads, shape = assembler)) + geom_point(aes(colour = assembler), size = 4) +
+geom_point(colour = "grey90", size = 1.5)+
+theme(axis.text.x=element_text(size=14,angle=90),
+          axis.text.y=element_text(size=14))
+
+library(cowplot)
+R<- plot_grid(p.length.distr,p.star, labels = c("A", "B"), nrow = 1)
+ggsave(R,filename = "~/Drap_Length/length_STAR.pdf",width = 16,height = 6)
 ```
 

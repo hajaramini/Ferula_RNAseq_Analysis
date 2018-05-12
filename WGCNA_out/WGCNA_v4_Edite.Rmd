@@ -179,7 +179,34 @@ MEs = mergedMEs
 save(MEs,moduleColors,moduleNumber, file = "~/WGCNA_input_out/MEs_all_tissues_Davis.hybrid.0.2.Rdata")
 
 MEDissThres = 0.3 #after merge
-write.table(moduleNumber,file = "~/WGCNA_input_out/moduleNumber.hybrid.0.3.txt") #22 modules
+# Plot the cut line into the dendrogram
+plot(METree, main = "Clustering of module eigengenes",
+     xlab = "", sub = "")
+abline(h=MEDissThres, col = "red")
+# Call an automatic merging 
+merge = mergeCloseModules(datExpr0tissues, dynamicColors, cutHeight = MEDissThres, verbose = 3) #Calculating 43 module eigengenes in given set
+# The merged module colors
+mergedColors = merge$colors
+# Eigengenes of the new merged modules:
+mergedMEs = merge$newMEs 
+# compare pre and post merge
+sizeGrWindow(12, 9)
+pdf(file = "~/WGCNA_input_out/Plot_v4/geneDendro_v2.hybrid.0.2.pdf", wi = 9, he = 6)
+plotDendroAndColors(geneTree, cbind(dynamicColors, mergedColors),
+c("Dynamic Tree Cut", "Merged dynamic"),
+dendroLabels = FALSE, hang = 0.03,
+addGuide = TRUE, guideHang = 0.05)
+dev.off() 
+# Rename to moduleColors
+moduleColors = mergedColors
+# Construct numerical labels corresponding to the colors
+colorOrder = c("grey", standardColors(50));
+moduleLabels = match(moduleColors, colorOrder)-1; 
+
+moduleNumber <- merge$colors #for know about each gene's module number
+table (moduleNumber)  %>% length()
+#[1] 22 for hybrid
+MEs = mergedMEs
 save(MEs,moduleColors,moduleNumber, file = "~/WGCNA_input_out/MEs_all_tissues_Davis.hybrid.0.3.Rdata")
 ```
 
@@ -300,4 +327,200 @@ for (module in files){
     write.table(over_enriched[,1:2],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.3.revigo.MF.", color), quote = FALSE,col.names = FALSE)
   }
 }
+```
+
+
+
+#Next we calculate the principle components for visualizations(Julin's suggestion), see the mean of expression of flower, stem, root and leaf in tissue modules for hybrid with MEDissThres0.2
+
+```{r}
+#load("~/WGCNA_input_out/MEs_all_tissues_Davis.hybrid.0.2.Rdata")
+dim(MEs) #12 43 
+#MEs_order <- MEs[c("8","4","12","9","5","1","10","6","2","11","7","3"),]
+#samples_order <- c("DR2", "DR3" , "DR6", "DS2","DS3","DS6","DF2","DF3","DF6","DL2","DL3","DL6")
+#save(MEs_order, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEs_order_all_tissues_Davis.Rdata")
+colors = names(table(moduleColors))
+ordergenes = geneTree$order
+samples_order <- c("R2", "R3" , "R6", "S2","S3","S6","F2","F3","F6","L2","L3","L6")
+pdf("~/WGCNA_input_out/Plot_v4/ModuleEigengeneVisualization.hybrid.0.2.pdf",height=6,width=6)
+#names(table(moduleColors)) use this for know the name of the color in figure by order
+par(mfrow=c(1,1), mar=c(6, 5, 2, 2) + 0.1, cex=1)
+
+for (which.module in names(table(moduleColors))){
+  ME = MEs[,paste("ME",which.module, sep="")] 
+  barplot(ME, col=which.module, main="", cex.main=2, 
+      ylab="eigengene expression",xlab="array sample",
+      names.arg = samples_order, cex.names = 0.7)
+}; 
+dev.off()
+#the exp now is better, we can see the consistant across tissues
+#the order of the color of the figure is besed on names(table(moduleColors))
+```
+
+#continue with hybrid.0.2
+#A simple way to examine the mean expression per array is to use
+
+```{r}
+meanExpressionByArray=apply( datExpr0tissues,1,mean, na.rm=T) #We start by determining the mean expression per array
+NumberMissingByArray=apply( is.na(data.frame(datExpr0tissues)),1, sum) # no missing data
+sizeGrWindow(9, 5)
+pdf("~/WGCNA_input_out/Plot_v4/meanExpressionByArray.hybrid.0.2.pdf",height=6,width=6)
+barplot(meanExpressionByArray,
+xlab = "Sample", ylab = "Mean expression",col=c("blue","blue","blue","red","red","red","orange","orange","orange", "green","green","green"), 
+main ="Mean expression across samples")
+
+```
+
+#relate modules to trait and identify important genes, 
+#gene relationship to trait and important modules: gene significance and module membership
+#Module membership (kME) and its use in comparing networks
+#**need trait file** 
+
+```{r}
+#Loading trait data I have to prepare dataset for matabolites
+traitData = read.csv("~/WGCNA_input_out/Metabolite_Traits_v2.csv"); #just Davis libraries
+#seperate two files based on the unit of matabolite
+traitDataCoumarin <-traitData[ ,c(1:2,4)] #remove UMP because all of them is zero, I just convert to 0.1 but prefer to do mot consider UMP
+traitDataTerpen <-traitData[ ,c(1,5,6,7)]
+# See how big the traits are and what are the trait and sample names
+names(traitDataCoumarin)
+names(traitDataTerpen) 
+#save
+save(traitData,traitDataCoumarin,traitDataTerpen, file = "~/WGCNA_input_out/Metabolite_Traits.RData")
+```
+# Form a data frame analogous to expression data that will hold the metabolite traits just for Coumarin.
+#for all tissues
+
+```{r}
+datTraitsCoumarin = traitDataCoumarin # we do not consider first 
+rownames(datTraitsCoumarin) <- datTraitsCoumarin$Sample
+# Form a data frame analogous to expression data that will hold the metabolite traits just for Terpen.
+datTraitsTerpen = traitDataTerpen 
+rownames(datTraitsTerpen) <- datTraitsTerpen$Sample
+```
+
+#We now have the expression data in the variable datExpr, and the corresponding clinical traits in the variable datTraits. Before we continue with network construction and module detection, we visualize how the clinical traits relate to the sample dendrogram.
+
+```{r}
+datTraitsCoumarin = traitDataCoumarin # we do not consider first 
+rownames(datTraitsCoumarin) <- datTraitsCoumarin$Sample
+# Form a data frame analogous to expression data that will hold the metabolite traits just for Terpen.
+datTraitsTerpen = traitDataTerpen 
+rownames(datTraitsTerpen) <- datTraitsTerpen$Sample
+rownames(datTraitsTerpen) <- c("R2", "R3","R6", "S2", "S3", "S6", "F2", "F3", "F6", "L2", "L3", "L6")
+rownames(datTraitsCoumarin) <- c("R2", "R3","R6", "S2", "S3", "S6", "F2", "F3", "F6", "L2", "L3", "L6")
+```
+
+#We now have the expression data in the variable datExpr, and the corresponding clinical traits in the variable datTraits. Before we continue with network construction and module detection, we visualize how the clinical traits relate to the sample dendrogram.
+
+```{r}
+# Re-cluster samples
+sampleTree2 = hclust(dist(datExpr0tissues), method = "average")
+# Convert traits to a color representation: white means low, red means high, grey means missing entry
+datTraits.mod <-traitData[,-1]
+rownames(datTraits.mod) <- c("R2", "R3","R6", "S2", "S3", "S6", "F2", "F3", "F6", "L2", "L3", "L6")
+datTraitsCoumarin.mod<- datTraitsCoumarin[,-1]
+datTraitsTerpen.mod<- datTraitsTerpen[,-1]
+traitColors = numbers2colors(datTraits.mod, signed = FALSE);
+traitColors <- traitColors[,-2] #remove UMP column, because it cuases all gray (0.1)
+traitColors_coumarin = numbers2colors(datTraitsCoumarin.mod, signed = FALSE)
+traitColors_terpen = numbers2colors(datTraitsTerpen.mod, signed = FALSE)
+```
+
+# Plot the sample dendrogram and the colors underneath.
+
+```{r}
+sizeGrWindow(7,6);
+pdf(file = "~/WGCNA_input_out/Plot_v4/SampleDendrogramTraitCoumarinHeatmap.hybrid.0.2.pdf", wi = 7, he = 6);
+par(mfrow=c(1,2));
+plotDendroAndColors(sampleTree2, traitColors_coumarin, groupLabels = names(datTraitsCoumarin.mod), main = "Sample dendrogram and trait heatmap")
+# Plot the sample dendrogram and the colors underneath.
+plotDendroAndColors(sampleTree2, traitColors_terpen, groupLabels = names(datTraitsTerpen.mod), main = "Sample dendrogram and trait heatmap")
+dev.off()
+
+#In the plot,white means a low value, red a high value, and grey a missing entry.The last step is to save the relevant expression and trait data for use in the next steps of the tutorial.
+save(datTraitsCoumarin,datTraitsCoumarin.mod,datTraitsTerpen,datTraitsTerpen.mod, file ="~/WGCNA_input_out/datTraits.RData")
+```
+
+#Relating modules and module eigengenes to external data
+#https://labs.genetics.ucla.edu/horvath/CoexpressionNetwork/Rpackages/WGCNA/Tutorials/Simulated-06-RelatingToExt.pdf
+
+```{r}
+#To get a sense of how related the modules are one can summarize each module by its eigengene (first principal component).
+datME=moduleEigengenes(datExpr0tissues,colors = moduleColors)$eigengenes #equal to MEs_order
+signif(cor(datME, use="p"), 2)
+#We define a dissimilarity measure between the module eigengenes that keeps track of the sign of the correlation between the module eigengenes, and use it to cluster the eigengene:
+dissimME=(1-t(cor(datME, method="p")))/2
+hclustdatME=hclust(as.dist(dissimME), method="average" )
+# Plot the eigengene dendrogram
+sizeGrWindow(10,6);
+pdf(file = "~/WGCNA_input_out/Plot_v4/Clustering tree based of the module eigengenes.hybrid.0.2.pdf", wi = 10, he = 6);
+par(mfrow=c(1,1))
+plot(hclustdatME, main="Clustering tree based of the module eigengenes")
+dev.off()
+```
+#Finding modules whiched are related to a clinical trait
+#There are two approaches one can follow. We discuss each below.
+#First Correlate the module eigengenes with the trait
+ 
+```{r}
+signif(cor(traitData$umbelliferone,datME, use="p"),2)
+#it is possible to do for each trait and each module which looked most interesting. An advantage of this approach is that it allows us to compute p-values using
+cor.test(traitData$umbelliferone, datME$MEcoral) #p-value = 0.009166
+
+#The following code can be used to get all p-values:
+p.values_UMF = corPvalueStudent(cor(traitData$umbelliferone,datME, use="p"), nSamples = length(traitData$umbelliferone))#  MEcoral
+p.values_UMF.DF <- as.data.frame(p.values_UMF)
+write.table(p.values_UMF.DF,file = "~/WGCNA_input_out/p.values_UMF.hybrid.0.2.txt")
+p.values_Luteolin = corPvalueStudent(cor(traitData$luteolin,datME, use="p"), nSamples = length(traitData$luteolin)) 
+
+#save
+write.table(p.values_Luteolin, file = "~/WGCNA_input_out/p.values_Luteolin.hybrid.0.2.txt", row.names=FALSE, sep="\t")
+p.values_Luteolin.DF$MEdarkseagreen3
+#[1] 0.0006941251 check the GO analysis
+
+pdf(file = "~/WGCNA_input_out/Plot_v4/MEs.MEdarkseagreen3.pdf", width = 6, height = 6);
+barplot(MEs$MEdarkseagreen3, ylab="eigengene expression",xlab="array sample",
+        names.arg = samples_order, cex.names = 1, col=c("blue","blue","blue","blue","blue","blue","green","green","green", "blue","blue","blue"), main = "darkseagreen3")
+dev.off() #see consistent among replication
+
+
+p.values_mono = corPvalueStudent(cor(traitData$monoterpene,datME, use="p"), nSamples = length(traitData$monoterpene))
+p.values_sesq = corPvalueStudent(cor(traitData$sesquiterpene,datME, use="p"), nSamples = length(traitData$sesquiterpene))
+p.values_mono_seq= corPvalueStudent(cor(traitData$mono.sesq,datME, use="p"), nSamples = length(traitData$mono.sesq))
+#save
+write.table(p.values_mono, file = "~/Ferula_RNAseq_Analysis/WGCNA_out/p.values_mono.csv", row.names=FALSE, sep="\t")
+write.table(p.values_sesq, file = "~/Ferula_RNAseq_Analysis/WGCNA_out/p.values_sesq.csv", row.names=FALSE, sep="\t")
+
+pdf(file = "~/WGCNA_input_out/Plot_v4/MEs.MEdarkseagreen3.pdf", width = 6, height = 6);
+barplot(MEs$MEdarkseagreen3, ylab="eigengene expression",xlab="array sample",
+        names.arg = samples_order, cex.names = 1, col=c("blue","blue","blue","blue","blue","blue","green","green","green", "blue","blue","blue"), main = "darkseagreen3")
+dev.off() #see consistent among replication
+```
+
+
+
+#Next we calculate the principle components for visualizations(Julin's suggestion), see the mean of expression of flower, stem, root and leaf in tissue modules for hybrid with MEDissThres0.3
+
+```{r}
+#load("~/WGCNA_input_out/MEs_all_tissues_Davis.hybrid.0.3.Rdata")
+dim(MEs) #12 22 
+#MEs_order <- MEs[c("8","4","12","9","5","1","10","6","2","11","7","3"),]
+#save(MEs_order, file = "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/WGCNA_out/MEs_order_all_tissues_Davis.Rdata")
+colors = names(table(moduleColors))
+ordergenes = geneTree$order
+samples_order <- c("R2", "R3" , "R6", "S2","S3","S6","F2","F3","F6","L2","L3","L6")
+pdf("~/WGCNA_input_out/Plot_v4/ModuleEigengeneVisualization.hybrid.0.2.v2.pdf",height=6,width=6)
+#names(table(moduleColors)) use this for know the name of the color in figure by order
+par(mfrow=c(3,1), mar=c(6, 5, 2, 2) + 0.1, cex=1)
+
+for (which.module in names(table(moduleColors))){
+  ME = MEs[,paste("ME",which.module, sep="")] 
+  boxplot(ME, col=which.module, main="", cex.main=2, 
+      ylab="eigengene expression",xlab="array sample",
+      names.arg = samples_order, cex.names = 0.7)
+}; 
+dev.off()
+#the exp now is better, we can see the comsistant across tissues
+#the order of the color of the figure is besed on table(mergedColors)
 ```

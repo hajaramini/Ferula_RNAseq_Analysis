@@ -18,8 +18,10 @@ Flavonoid_genes <- c("oases3_k25_Locus_11029_Transcript_9_1","oases3_k25_Locus_4
 
 #To check the exp of all Flavonoid genes
 Flavonoid_genes_counts <- counts_Davis[Flavonoid_genes,] #dim 23 4
-rownames(Flavonoid_genes_counts) = c("4CL-like1","4CL-like2","4CL-like3","4CL-like4","4CL-like5","4CL-like6","C2'H","CHI-like1","CHI-like2","CHI-like3","CHI-like4","CHI-like5","CHS-like1","CHS-like2","FH-like1","FH-like2","FH-like3","FNS","PAL-like1","PAL-like2","PAL-like3","PAL-like4","PAL-like5")
-
+count_Davis.tpm <- read.delim("~/Phylogeny_Tree/combined_countss.tsv",header = T, row.names = 1)
+Flavonoid_genes_counts <- count_Davis.tpm[Flavonoid_genes,] #dim 23 4
+rownames(Flavonoid_genes_counts) = c("Ferula assafoetida 4CL-like1","Ferula assafoetida 4CL-like2","Ferula assafoetida 4CL-like3","Ferula assafoetida 4CL-like4","Ferula assafoetida 4CL-like5","Ferula assafoetida 4CL-like6","Ferula assafoetida C2'H","Ferula assafoetida CHI-like1","Ferula assafoetida CHI-like2","Ferula assafoetida CHI-like3","Ferula assafoetida CHI-like4","Ferula assafoetida CHI-like5","Ferula assafoetida CHS-like1","Ferula assafoetida CHS-like2","Ferula assafoetida FH-like1","Ferula assafoetida FH-like2","Ferula assafoetida FH-like3","Ferula assafoetida FNS","Ferula assafoetida PAL-like1","Ferula assafoetida PAL-like2","Ferula assafoetida PAL-like3","Ferula assafoetida PAL-like4","Ferula assafoetida PAL-like5")
+colnames(Flavonoid_genes_counts) <- c("Flower","Leaf","Root","Stem")
 #convert row and column for better understanding
 t.Flavonoid_genes_counts <- as.data.frame(t(Flavonoid_genes_counts))
 t.Flavonoid_genes_counts$sample <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.Flavonoid_genes_counts))
@@ -32,12 +34,12 @@ p <- ggplot(data = mt.Flavonoid_genes_counts) +
   geom_point(mapping = aes(x = tissue, y = value)) + 
   facet_wrap(~ variable, nrow = 4)
 
-ggsave(p, file="~/Phylogeny_Tree/expression_pattern_Flavonoid_genes.v1.png",width=15,height=15)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_Flavonoid_genes.tpm.pdf",width=15,height=15)
 ```
 
 ```{r}
 #remove genes by read count ~zero (PAL genes)
-PAL_genes <- c("PAL-like1","PAL-like4","PAL-like5")
+PAL_genes <- c("Ferula assafoetida PAL-like1","Ferula assafoetida PAL-like4","Ferula assafoetida PAL-like5")
 PAL_genes_counts<-Flavonoid_genes_counts[PAL_genes,]
 t.PAL_genes_count <- as.data.frame(t(PAL_genes_counts))
 t.PAL_genes_count$sample <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.PAL_genes_count))
@@ -50,14 +52,14 @@ mt.PAL_genes_count
 p <- ggplot(data =mt.PAL_genes_count, mapping = aes(x =Tissue, y = value, fill=Tissue)) + 
   geom_bar(stat="identity") + 
     facet_wrap(~variable)
-ggsave(p, file="~/Phylogeny_Tree/expression_pattern_PAL_genes_v2.png",width=8,height=4)
-ggsave(p, file="~/Phylogeny_Tree/expression_pattern_PAL_genes_v2.pdf",width=8,height=3)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_PAL_genes_tpm.png",width=8,height=4)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_PAL_genes_tpm.pdf",width=10,height=4)
 ```
 
 
 ```{r}
 #4CL-like genes
-CL_genes <- c("4CL-like2","4CL-like5")
+CL_genes <- c("Ferula assafoetida 4CL-like2","Ferula assafoetida 4CL-like5")
 CL_genes_counts<-Flavonoid_genes_counts[CL_genes,]
 t.CL_genes_count <- as.data.frame(t(CL_genes_counts))
 t.CL_genes_count$sample <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.CL_genes_count))
@@ -71,12 +73,12 @@ p <- ggplot(data =mt.CL_genes_count, mapping = aes(x =Tissue, y = value, fill=Ti
   geom_bar(stat="identity") + 
     facet_wrap(~variable)
 ggsave(p, file="~/Phylogeny_Tree/expression_pattern_CL_genes_v2.png",width=6,height=4)
-ggsave(p, file="~/Phylogeny_Tree/expression_pattern_CL_genes_v2.pdf",width=6,height=4)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_CL_genes_cpm.pdf",width=8,height=4)
 ```
 
 ```{r}
 #CHI_genes
-CHI_genes_counts<-Flavonoid_genes_counts[c("CHI-like1","CHI-like4"),]
+CHI_genes_counts<-Flavonoid_genes_counts[c("Ferula assafoetida CHI-like1","Ferula assafoetida CHI-like4"),]
 t.CHI_genes_count <- as.data.frame(t(CHI_genes_counts))
 t.CHI_genes_count$sample <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.CHI_genes_count))
 t.CHI_genes_count$Tissue <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.CHI_genes_count))
@@ -89,13 +91,13 @@ p <- ggplot(data =mt.CHI_genes_count, mapping = aes(x =Tissue, y = value, fill=T
   geom_bar(stat="identity") + 
     facet_wrap(~variable)
 ggsave(p, file="~/Phylogeny_Tree/expression_pattern_CHI_genes_v2.png",width=5,height=3)
-ggsave(p, file="~/Phylogeny_Tree/expression_pattern_CHI_genes_v2.pdf",width=6,height=3)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_CHI_genes_cpm.pdf",width=8,height=4)
 ```
 
 
 ```{r}
 # FH-like1_genes
-FH_genes_counts<-Flavonoid_genes_counts["FH-like1",]
+FH_genes_counts<-Flavonoid_genes_counts["Ferula assafoetida FH-like1",]
 t.FH_genes_count <- as.data.frame(t(FH_genes_counts))
 t.FH_genes_count$sample <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.FH_genes_count))
 t.FH_genes_count$Tissue <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.FH_genes_count))
@@ -108,12 +110,12 @@ p <- ggplot(data =mt.FH_genes_count, mapping = aes(x =Tissue, y = value, fill=Ti
   geom_bar(stat="identity") + 
     facet_wrap(~variable)
 ggsave(p, file="~/Phylogeny_Tree/expression_pattern_FH_genes_v2.png",width=5,height=3)
-ggsave(p, file="~/Phylogeny_Tree/expression_pattern_FH_genes_v2.pdf",width=5,height=3)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_FH_genes_cpm.pdf",width=4,height=3)
 ```
 
 ```{r}
 # FNS-genes
-FNS_genes_counts<-Flavonoid_genes_counts["FNS",]
+FNS_genes_counts<-Flavonoid_genes_counts["Ferula assafoetida FNS",]
 t.FNS_genes_count <- as.data.frame(t(FNS_genes_counts))
 t.FNS_genes_count$sample <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.FNS_genes_count))
 t.FNS_genes_count$Tissue <- gsub("(Flower|Leaf|Root|Stem)","\\1",rownames(t.FNS_genes_count))
@@ -126,5 +128,5 @@ p <- ggplot(data =mt.FNS_genes_count, mapping = aes(x =Tissue, y = value, fill=T
   geom_bar(stat="identity") + 
     facet_wrap(~variable)
 ggsave(p, file="~/Phylogeny_Tree/expression_pattern_FNS_genes_v2.png",width=5,height=3)
-ggsave(p, file="~/Phylogeny_Tree/expression_pattern_FNS_genes_v2.pdf",width=5,height=3)
+ggsave(p, file="~/Phylogeny_Tree/expression_pattern_FNS_genes_cpm.pdf",width=4,height=3)
 ```

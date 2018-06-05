@@ -19,12 +19,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #cat Trinity.Length.txt | awk '{print $1,$2}' | sed 's/len=//g' > Trinity.Length.txt2
 #mv Trinity.Length.txt2 Khmer.Length.txt
+
+#prepare Trinity.Length.Final.txt for Trinity result in /share/malooflab/Hajar/Plant6_Filtered/trinity_plant6_filtered_no_stranded.out
 ```
 
 ```{r}
 Drap_Oases_Length<- read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Drap_Length/Drap_Oases_Plant6_No_Whitespace.Length.txt2", header = F)
 Drap_Trinity_Length<- read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Drap_Length/Drap_Trinity_Plant6.Length.txt3", header = F)
 Khmer_Length<- read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Drap_Length/Khmer.Length.txt", header = F)
+Trinity_Length<- read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Drap_Length/Trinity.Length.Final.txt", header = F)
 ```
 # 2) Length Distribution Function
 
@@ -37,7 +40,7 @@ length.distr.calc <- function(length.data){
 return(length.distr)
 }
 
-length.distr<- rbind(length.distr.calc(Khmer_Length),length.distr.calc(Drap_Trinity_Length),length.distr.calc(Drap_Oases_Length))
+length.distr<- rbind(length.distr.calc(Khmer_Length),length.distr.calc(Drap_Trinity_Length),length.distr.calc(Drap_Oases_Length),length.distr.calc(Trinity_Length))
 length.distr$range <- factor(length.distr$range, levels = c("<200","200-500","500-1000","1000-1500","1500-2000","2000-5000",">5000"))
 
 ```
@@ -58,10 +61,17 @@ ggsave(p.length.distr,file="~/length.distr_Khmer_Trinity_Oases.png",width=8,heig
 
 ```{r}
 #STAR result
+star <- read.csv("~/Drap_Length/STAR_result_v2.csv",header = T)
 p.star <- ggplot(star, aes(tissue, uniquely.mapped.reads, shape = assembler)) + geom_point(aes(colour = assembler), size = 4) +
 geom_point(colour = "grey90", size = 1.5)+
 theme(axis.text.x=element_text(size=14,angle=90),
           axis.text.y=element_text(size=14))
+
+
+#stacked bar
+star.m <- melt(star)
+p.star<- ggplot(star.m, aes(x=tissue, y=value,fill=variable)) 
+p.star + geom_bar(stat = "identity") + facet_wrap(~assembler)
 
 library(cowplot)
 R<- plot_grid(p.length.distr,p.star, labels = c("A", "B"), nrow = 1)

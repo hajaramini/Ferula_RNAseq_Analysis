@@ -353,19 +353,21 @@ colnames(vstMat.dge) <- colnames(counts_Davis_small)
 #install.packages("ggdendro")
 DE_Genes_CPM <- read.csv("~/Phylogeny_Tree/DE_Genes_CPM_Selectedd", header=T, sep="\t", row.names = 1)
 DE_Genes_CPMM <- DE_Genes_CPM[,c("Root2","Root3","Root6","Stem2","Stem3","Stem6","Flower2","Flower3","Flower6","Leaf2","Leaf3","Leaf6")] #change the order or colnames to put same tissues near each other
-dim(DE_Genes_CPM) #3823  12
+dim(DE_Genes_CPMM) #3823  12
+
+##for cluster+heatmap Julin's comment for paper
 
 library(ggdendro)
 #install.packages("pvclust")
 library(pvclust)
 pdf(file = "~/Kallisto_input_out/heatmap_DE_Genes_CPM.pdf",width = 20, height = 8)
-hc.mds.dge <- hclust(dist(t(DE_Genes_CPM)))
+hc.mds.dge <- hclust(dist(t(DE_Genes_CPMM)))
 plot(hc.mds.dge)
 rect.hclust(hc.mds.dge, k = 4, border = "red")
-heatmap.2(as.matrix(DE_Genes_CPM), Rowv=as.dendrogram(hc.mds.dge), scale="row", density.info="none", trace="none")
+heatmap.2(as.matrix(DE_Genes_CPMM), Rowv=as.dendrogram(hc.mds.dge), scale="row", density.info="none", trace="none")
 dev.off()
-d<-as.matrix(DE_Genes_CPM)
-pdf(file ="~/Kallisto_input_out/Heatmap_DE_Genes_CPM.pdf", height=10,width=10)
+d<-as.matrix(DE_Genes_CPMM)
+pdf(file ="~/Kallisto_input_out/Heatmap_DE_Genes_CPM.pdf", height=8,width=8)
 #jpeg('Heatmap_DE_Genes_CPM.jpg' )
 #par(mar=c(4, 0, 2, 2)) #bottom, left, top, right
 hr <- hclust(as.dist(1-cor(t(d), method="pearson")), method="complete")
@@ -381,10 +383,10 @@ heatmap.2(d, main="Heatmap DEgenes)",
           Colv=NA, dendrogram="row", 
           scale="row", col=myheatcol, 
           density.info="none", 
-          xlab = "Sample",
+          #xlab = "Sample",
           trace="none", RowSideColors= myClusterSideBar)
 dev.off()
-
+#####
 
 ggdata <- dendro_data(as.dendrogram(hc.mds.dge))
 ggdata$labels$gt <- gsub("(R|S|F|L)(2|3|6)","\\2" , ggdata$labels$label) 
@@ -554,14 +556,5 @@ p<- ggplot(mt.Topgenes.counts, aes(gt, value)) +
   geom_boxplot(aes(color = trt)) +
   facet_grid(trt ~ variable) 
 ggsave(p, file="~/Ferula_RNAseq_Analysis/Kallisto_out/expression_pattern_topgenes.png",width=28,height=25)
-```
-
-
-
-```{r}
-colnames(DEgenes2)[1] <- "GeneID"
-DE_counts <- DEgenes2 %>% select(GeneID)
-#get count data specifically for the GxE genes
-
 ```
 

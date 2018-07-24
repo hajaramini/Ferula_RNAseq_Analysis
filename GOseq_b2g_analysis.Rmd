@@ -52,7 +52,7 @@ write.table(b2g_project_interpro_melt,file="/Network/Servers/avalanche.plb.ucdav
 #for attributing all GO term to each contig
 #test <- read.delim("b2g_project_edit3", header = F, sep = "\t")
 View(test)
-test <- read.delim("b2g_project_edit3", header = F, sep = " ")
+test <- read.delim("~/GOseq_b2g_input_out/b2g_project_edit3", header = F, sep = " ")
 #test[test$V2 == "GO:0000786",] #check the specific GO term and find the genes ID for this GO term
 #convert Drap_Oases_Plant6.Bngo to list for using in downstream analysis, it is very important to have the list for each object, This value use for GOseq function
 test.list <- tapply(as.character(test$V2),test$V1,c) #use this value for GOseq function

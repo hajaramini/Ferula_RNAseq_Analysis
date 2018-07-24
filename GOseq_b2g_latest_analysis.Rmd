@@ -1,0 +1,460 @@
+---
+title: "GOseq_b2g_latest_analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#GOseq analysis with go_latest.obo, folder Last_Try_Ferula
+
+```{r}
+setwd("~/Ferula_RNAseq_Analysis")
+```
+
+# 1) Command Line Pre-melt Steps
+
+```{r}
+# b2g_project.txt files from  /Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/GOseq_b2g_input_out/Last_Try_Ferula
+#cat b2g_project.txt | grep GO | cut -f1,10 > b2g_project_GO_rough # Getting Transcript ID and GO terms
+#31524
+#cat b2g_project_GO_rough2 | sed 's/;/ /g' | awk 'BEGIN{FS=" "}{print NF}'| sort -n | uniq -c# Finding lines with X fields (Max fields: 186)
+#tail -31523 b2g_project_GO_rough > b2g_project_GO_rough2
+#less b2g_project_GO_rough2 | sed 's/    /;/' | sed 's/;/,/g' > b2g_project_GO_R # Changing field separator to comma
+# nano b2g_project_GO_R: Added #186 filler, (so there are 186 columns/fields in line 1) Fixing column issues with R import
+
+```
+
+#2) Melting
+
+```{r}
+library(tidyverse)
+library(reshape2)
+b2g_project_rough <- read.csv("~/GOseq_b2g_input_out/Last_Try_Ferula/b2g_project_GO_R", header=FALSE, fill=TRUE)
+dim(b2g_project_rough)
+#[1]31523   186
+b2g_project_melt <- melt(b2g_project_rough, id.vars = "V1", measure.vars=c("V2","V3","V4","V5","V6","V7","V8","V9","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20","V21","V22","V23","V24","V25","V26","V27","V28","V29","V30","V31","V32","V33","V34","V35","V36","V37","V38","V39","V40","V41","V42","V43","V44","V45","V46","V47","V48","V49","V50","V51","V52","V53","V54","V55","V56","V57","V58","V59","V60","V61","V62","V63","V64","V65","V66","V67","V68","V69","V70","V71","V72","V73","V74","V75","V76","V77","V78","V79","V80","V81","V82","V83","V84","V85","V86","V87","V88","V89","V90","V91","V92","V93","V94","V95","V96","V97","V98","V99","V100","V101","V102","V103","V104","V105","V106","V107","V108","V109","V110","V111","V112","V113","V114","V115","V116","V117","V118","V119","V120","V121","V122","V123","V124","V125","V126","V127","V128","V129","V130","V131","V132","V133","V134","V135","V136","V137","V138","V139","V140","V141","V142","V143","V144","V145","V146","V147","V148","V149","V150","V151","V152","V153","V154","V155","V156","V157","V158","V159","V160","V161","V162","V163","V164","V165","V166","V167","V168","V169","V170","V171","V172","V173","V174","V175","V176","V177","V178","V179","V180","V181","V182","V183","V184","V185","V186"))
+b2g_project_melt %>% dim() #5831755    3
+write.table(b2g_project_melt,file="/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/GOseq_b2g_input_out/Last_Try_Ferula/b2g_project_melt", quote=FALSE,row.names=FALSE)
+save(b2g_project_melt, file = "~/GOseq_b2g_input_out/Last_Try_Ferula/b2g_project_melt.RData")
+```
+
+# 3) Command Line Post Melt Formatting
+
+```{r}
+#cat b2g_project_melt | grep -v "V1 variable value" | awk '{print $1,$3}'| sort | uniq >  b2g_project_edit
+#cat b2g_project_edit | sed 's/ filler//g' | sed 's/_ORF//g' > b2g_project_edit2
+#cat b2g_project_edit2 | sort | uniq | grep "GO" > b2g_project_edit3
+#for attributing all GO term to each contig
+#test <- read.delim("b2g_project_edit3", header = F, sep = "\t")
+View(test)
+test <- read.delim("~/GOseq_b2g_input_out/Last_Try_Ferula/b2g_project_edit3", header = F, sep = " ")
+#test[test$V2 == "GO:0000786",] #check the specific GO term and find the genes ID for this GO term
+#convert Drap_Oases_Plant6.Bngo to list for using in downstream analysis, it is very important to have the list for each object, This value use for GOseq function
+test.list <- tapply(as.character(test$V2),test$V1,c) #use this value for GOseq function
+#library(reshape2)
+#library(tidyverse)
+#m.test <- melt(test)
+#View(m.test)
+#the helpfull function for combining second column based on first column
+aaa <- test %>% group_by(V1) %>% arrange(V2) %>% summarise(V2 = paste(V2, collapse =";"))
+#View(aaa)
+#aaa %>% dim() #31518 2
+#b2g_project_GO_final <- aaa # I do not use this value for downstream analysis
+#save(b2g_project_GO_final, file = "~/GOseq_b2g_input_out/Last_Try_Ferula/b2g_project_edit_final.RData")
+#write.csv(b2g_project_GO_final,"~/GOseq_b2g_input_out/Last_Try_Ferula/b2g_project_GO_final")
+```
+
+#For Transcript Files
+
+```{r}
+#cat b2g_project_GO_final | sed 's/"//g' | sed 's/,/ /g' | awk '{print $2,$3}' > b2g_project_GO_final2 #nano to remove V1
+#cat b2g_project_GO_final2 | awk '{print $1}' | sort | uniq > b2g_project_ID # wc 31518 
+```
+
+#GO Enrichment (function)
+
+```{r}
+Drap_Oases_Plant6.Bngo<-read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/GOseq_b2g_input_out/Last_Try_Ferula/b2g_project_GO_final2",header=FALSE, stringsAsFactors = F) #add stringsAsFactors to fix the prob of creation list in next step
+#convert Drap_Oases_Plant6.Bngo to list for using in downstream analysis, it is very important to have the list for ech object, but this did not work for GOseq function,we need to seperate each GO term by "" 
+View(Drap_Oases_Plant6.Bngo)
+#aaa <- as.list(Drap_Oases_Plant6.Bngo$V2)
+#names(aaa) <- Drap_Oases_Plant6.Bngo$V1
+#head(aaa)
+Drap_Oases_Plant6.Bngo.list <- test.list #use this list for downstreaming analysis
+#1) GO annotaion 
+library(ShortRead);library(goseq);library(GO.db);library("annotate");
+#for ggplot heatmap library(heatmap)
+library(WGCNA);library(ggplot2);library(reshape2);library(scales); library (plyr)
+Drap_Oases_Plant6.cdna<-readDNAStringSet("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Goseq_interpro_input_out/Drap_Oases_Plant6_No_Whitespace.fasta")
+head(Drap_Oases_Plant6.cdna)
+Drap_Oases_Plant6.bias<-nchar(Drap_Oases_Plant6.cdna) #60134
+names(Drap_Oases_Plant6.bias)<-names(Drap_Oases_Plant6.cdna)
+length(Drap_Oases_Plant6.bias) # 60134
+save(Drap_Oases_Plant6.Bngo.list,file="/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/GOseq_b2g_input_out/Drap_Oases_Plant6.Bngo.list.Rdata")
+```
+
+```{r}
+#load("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/GOseq_b2g_input_out/Drap_Oases_Plant6.Bngo.list.Rdata")
+#genelist could be any interested genes list (DEgenes list or all genes)
+#first run for all genes
+Drap_Oases_Plant6_ID<-read.table("/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/GOseq_b2g_input_out/Last_Try_Ferula/b2g_project_ID",header=FALSE)
+#first for all genes
+genelist <- Drap_Oases_Plant6_ID$V1 
+length(genelist) #31518
+Drap_Oases_Plant6.GOseq.Bn.ORA <-function(genelist,padjust=0.05,ontology="BP") { #return GO enrichment table, padjus, padjust=0.05
+TF<-(names(Drap_Oases_Plant6.bias) %in% genelist)*1
+names(TF)<-names(Drap_Oases_Plant6.bias)
+pwf<-nullp(TF,bias.data=Drap_Oases_Plant6.bias)
+  GO.pval <- goseq(pwf,gene2cat=Drap_Oases_Plant6.Bngo.list,use_genes_without_cat=TRUE) 
+  if(ontology=="BP") {
+    GO.pval2<-subset(GO.pval,ontology=="BP")
+  } else if(ontology=="CC") {
+    GO.pval2<-subset(GO.pval,ontology=="CC")
+  } else {
+    GO.pval2<-subset(GO.pval,ontology=="MF")
+  }
+
+GO.pval2$over_represented_padjust<-p.adjust(GO.pval2$over_represented_pvalue,method="BH")
+  if(GO.pval2$over_represented_padjust[1]>padjust) stop("no enriched GO")
+  else {
+    enriched.GO<-GO.pval2[GO.pval2$over_represented_padjust<padjust,]
+    print("enriched.GO is")
+    print(enriched.GO)
+
+    ## write Term and Definition
+    for(i in 1:dim(enriched.GO)[1]) {
+      enriched.GO$Term[i]<-Term(GOTERM[[enriched.GO[i,"category"]]])
+      enriched.GO$Definition[i]<-Definition(GOTERM[[enriched.GO[i,"category"]]])
+    }
+    return(enriched.GO)
+  }
+}
+```
+#I want to see ORA for all contigs (BP)
+
+```{r}
+Drap_Oases_Plant6.GO.ORA.gt <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist)
+class(Drap_Oases_Plant6.GO.ORA.gt)
+Drap_Oases_Plant6.GO.ORA.gt$term
+write.table(Drap_Oases_Plant6.GO.ORA.gt[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Last_Try_Ferula/Drap_Oases_Plant6.GO.ORA.gt", quote = FALSE,col.names = TRUE)
+```
+#I want to see ORA for all contigs (MF)
+
+```{r}
+Drap_Oases_Plant6.GO.ORA.gt.MF <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "MF")
+class(Drap_Oases_Plant6.GO.ORA.gt.MF)
+Drap_Oases_Plant6.GO.ORA.gt.MF$term
+write.table(Drap_Oases_Plant6.GO.ORA.gt.MF[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Last_Try_Ferula/Drap_Oases_Plant6.GO.ORA.gt.MF", quote = FALSE,col.names = TRUE)
+```
+
+```{r}
+Drap_Oases_Plant6.GO.ORA.gt.CC <- Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "CC")
+class(Drap_Oases_Plant6.GO.ORA.gt.CC)
+Drap_Oases_Plant6.GO.ORA.gt.CC$term
+write.table(Drap_Oases_Plant6.GO.ORA.gt.CC[,c(1,2,6)],row.names=FALSE,file="~/GOseq_b2g_input_out/Last_Try_Ferula/Drap_Oases_Plant6.GO.ORA.gt.CC", quote = FALSE,col.names = TRUE)
+```
+
+```{r}
+#import the DEgenes list
+DEgene.FvsR <- read.csv("~/Kallisto_input_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsR.csv",header=T)
+DEgene.FvsL <- read.csv("~/Kallisto_input_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsL.csv",header=T)
+DEgene.FvsS <- read.csv("~/Kallisto_input_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsS.csv",header=T)
+DEgene.LvsR <- read.csv("~/Kallisto_input_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.LvsR.csv",header=T)
+```
+
+```{r}
+#split into up and down
+genes.FvsR.up<-subset(DEgene.FvsR, logFC > 0) #425
+genes.FvsR.up.names <-genes.FvsR.up[,1] #425
+genes.FvsR.down<-subset(DEgene.FvsR, logFC < 0) # 153
+genes.FvsR.down.names <-genes.FvsR.down[,1] #153
+# GOseq for FvsR up
+    GO.ORA.temp.FvsR.up<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsR.up.names)
+    GO.ORA.temp.FvsR.up$sample<-"Flower vs Root"
+    GO.ORA.temp.FvsR.up$FC<-"up"
+save(GO.ORA.temp.FvsR.up,file = "~/GOseq_b2g_input_out/Last_Try_Ferula/GOseq.FvsR.up.enrich.RData")
+# GOseq for FvsR down
+    GO.ORA.temp.FvsR.down<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsR.down.names) #no enriched GO
+```
+
+```{r}
+#Leaf vs Root 
+genes.LvsR.up<-subset(DEgene.LvsR, logFC > 0) #985
+genes.LvsR.up.names <-genes.LvsR.up[,1] #985
+genes.LvsR.down<-subset(DEgene.LvsR, logFC < 0) # 2794
+genes.LvsR.down.names <-genes.LvsR.down[,1] #2794
+# GOseq for LvsR up
+    GO.ORA.temp.LvsR.up<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.LvsR.up.names)
+    GO.ORA.temp.LvsR.up$sample<-"Leaf vs Root"
+    GO.ORA.temp.LvsR.up$FC<-"up"
+save(GO.ORA.temp.LvsR.up,file = "~/GOseq_b2g_input_out/Last_Try_Ferula/GOseq.LvsR.up.enrich.RData")
+
+# GOseq for LvsR down
+    GO.ORA.temp.LvsR.down<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.LvsR.down.names)
+    GO.ORA.temp.LvsR.down$sample<-"Leaf vs Root"
+    GO.ORA.temp.LvsR.down$FC<-"down"
+save(GO.ORA.temp.LvsR.down,file = "~/GOseq_b2g_input_out/Last_Try_Ferula/GOseq.LvsR.down.enrich.RData")
+```
+
+```{r}
+#Flower vs Stem 
+genes.FvsS.up<-subset(DEgene.FvsS, logFC > 0) #413
+genes.FvsS.up.names <-genes.FvsS.up[,1] #413
+genes.FvsS.down<-subset(DEgene.FvsS, logFC < 0) # 80
+genes.FvsS.down.names <-genes.FvsS.down[,1] #80
+# GOseq for FvsS up
+    GO.ORA.temp.FvsS.up<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsS.up.names)
+    GO.ORA.temp.FvsS.up$sample<-"Flower vs Stem"
+    GO.ORA.temp.FvsS.up$FC<-"up"
+save(GO.ORA.temp.FvsS.up,file = "~/GOseq_b2g_input_out/Last_Try_Ferula/GOseq.FvsS.up.enrich.RData")
+
+# GOseq for FvsS down
+    GO.ORA.temp.FvsS.down<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsS.down.names) #no enriched GO
+
+```
+
+```{r}
+#Flower vs Leaf
+genes.FvsL.up<-subset(DEgene.FvsL, logFC > 0) #642
+genes.FvsL.up.names <-genes.FvsL.up[,1] #642
+genes.FvsL.down<-subset(DEgene.FvsL, logFC < 0) # 65
+genes.FvsL.down.names <-genes.FvsL.down[,1] #65
+# GOseq for FvsL up
+  GO.ORA.temp.FvsL.up<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsL.up.names) #NO enriched
+
+# GOseq for FvsL down
+    GO.ORA.temp.FvsL.down<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsL.down.names) # no enriched GO
+    GO.ORA.temp.FvsL.down$sample<-"Flower vs Leaf"
+
+```
+
+```{r}
+# GOseq for FvsR up "MF"
+    GO.ORA.temp.FvsR.up.MF<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsR.up.names,ontology = "MF")
+    GO.ORA.temp.FvsR.up.MF$sample<-"Flower vs Root"
+    GO.ORA.temp.FvsR.up.MF$FC<-"up"
+save(GO.ORA.temp.FvsR.up.MF,file = "~/GOseq_b2g_input_out/Last_Try_Ferula/GOseq.FvsR.up.MF.enrich.RData")
+# GOseq for FvsR down
+    GO.ORA.temp.FvsR.down.MF<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsR.down.names,ontology = "MF")
+    GO.ORA.temp.FvsR.down.MF$sample<-"Flower vs Root"
+    GO.ORA.temp.FvsR.down.MF$FC<-"down"
+save(GO.ORA.temp.FvsR.down.MF,file = "~/GOseq_b2g_input_out/Last_Try_Ferula/GOseq.FvsR.down.MF.enrich.RData")
+```
+
+```{r}
+#Leaf vs Root 
+# GOseq for LvsR up
+    GO.ORA.temp.LvsR.up.MF<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.LvsR.up.names,ontology = "MF")
+    GO.ORA.temp.LvsR.up.MF$sample<-"Leaf vs Root"
+    GO.ORA.temp.LvsR.up.MF$FC<-"up"
+save(GO.ORA.temp.LvsR.up.MF,file = "~/GOseq_b2g_input_out/Last_Try_Ferula/GOseq.LvsR.up.MF.enrich.RData")
+
+# GOseq for LvsR down
+    GO.ORA.temp.LvsR.down.MF<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.LvsR.down.names,ontology = "MF")
+    GO.ORA.temp.LvsR.down.MF$sample<-"Leaf vs Root"
+    GO.ORA.temp.LvsR.down.MF$FC<-"down"
+    save(GO.ORA.temp.LvsR.down.MF,file = "~/GOseq_b2g_input_out/Last_Try_Ferula/GOseq.LvsR.down.MF.enrich.RData")
+```
+
+```{r}
+# GOseq for FvsS up
+    GO.ORA.temp.FvsS.up.MF<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsS.up.names,ontology = "MF")
+    GO.ORA.temp.FvsS.up.MF$sample<-"Flower vs Stem"
+    GO.ORA.temp.FvsS.up.MF$FC<-"up"
+    
+save(GO.ORA.temp.FvsS.up.MF,file = "~/GOseq_b2g_input_out/Last_Try_Ferula/GOseq.FvsS.up.MF.enrich.RData")
+
+# GOseq for FvsS down
+    GO.ORA.temp.FvsS.down.MF<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsS.down.names,ontology = "MF")
+    GO.ORA.temp.FvsS.down.MF$sample<-"Flower vs Stem"
+    GO.ORA.temp.FvsS.down.MF$FC<-"down"
+save(GO.ORA.temp.FvsS.down.MF,file = "~/GOseq_b2g_input_out/GOseq.FvsS.down.MF.enrich.RData")
+```
+
+```{r}
+# GOseq for FvsL up
+  GO.ORA.temp.FvsL.up.MF<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsL.up.names,ontology = "MF") #NO enriched
+GO.ORA.temp.FvsL.up.MF$sample<-"Flower vs Leaf"
+    GO.ORA.temp.FvsL.up.MF$FC<-"up"
+save(GO.ORA.temp.FvsL.up.MF,file = "~/GOseq_b2g_input_out/GOseq.FvsL.up.MF.enrich.RData")
+
+# GOseq for FvsL down
+    GO.ORA.temp.FvsL.down.MF<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsL.down.names,ontology = "MF")#no enriched GO
+
+```
+
+```{r}
+# GOseq for FvsR up
+    GO.ORA.temp.FvsR.up.CC<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsR.up.names,ontology = "CC") #NO
+# GOseq for FvsR down
+GO.ORA.temp.FvsR.down.CC<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsR.down.names,ontology = "CC") #no enriched GO
+```
+
+```{r}
+#Leaf vs Root 
+# GOseq for LvsR up
+    GO.ORA.temp.LvsR.up.CC<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.LvsR.up.names,ontology = "CC")
+    GO.ORA.temp.LvsR.up.CC$sample<-"Leaf vs Root"
+    GO.ORA.temp.LvsR.up.CC$FC<-"up"
+save(GO.ORA.temp.LvsR.up.CC,file = "~/GOseq_b2g_input_out/Last_Try_Ferula/GOseq.LvsR.up.CC.enrich.RData")
+
+# GOseq for LvsR down
+    GO.ORA.temp.LvsR.down.CC<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.LvsR.down.names,ontology = "CC") #NO
+```
+
+```{r}
+#Flower vs Stem 
+# GOseq for FvsS up
+    GO.ORA.temp.FvsS.up.CC<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsS.up.names,ontology = "CC") #NO
+
+# GOseq for FvsS down
+    GO.ORA.temp.FvsS.down.CC<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsS.down.names,ontology = "CC") #no enriched GO
+
+```
+
+```{r}
+#Flower vs Leaf
+# GOseq for FvsL up
+  GO.ORA.temp.FvsL.up.CC<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsL.up.names,ontology = "CC") 
+  GO.ORA.temp.FvsL.up.CC$sample<-"Flower vs Leaf"
+    GO.ORA.temp.FvsL.up.CC$FC<-"up"
+save(GO.ORA.temp.FvsL.up.CC,file = "~/GOseq_b2g_input_out/Last_Try_Ferula/GOseq.FvsL.up.CC.enrich.RData")
+
+# GOseq for FvsL down
+    GO.ORA.temp.FvsL.down.CC<-Drap_Oases_Plant6.GOseq.Bn.ORA(genes.FvsL.down.names,ontology = "CC") # no enriched GO
+```
+
+
+```{r}
+#visulize
+DEgenesGOseq<-list.files(pattern="GOseq.(FvsR|FvsL|LvsR|FvsS).(up|down)",path="~/GOseq_b2g_input_out/Last_Try_Ferula/BP/")
+#combine
+DEgenesGOseq.list2<-sapply(paste("~/GOseq_b2g_input_out/Last_Try_Ferula/BP/",DEgenesGOseq,sep=""),function(x) mget(load(x)))
+names(DEgenesGOseq.list2)
+DEgenesGOseq.list2.summary<-do.call("rbind",DEgenesGOseq.list2) 
+head(DEgenesGOseq.list2.summary) # make sure those are file names
+rownames(DEgenesGOseq.list2.summary)<-1:nrow(DEgenesGOseq.list2.summary)
+View(DEgenesGOseq.list2.summary)
+GO.list<-unique(DEgenesGOseq.list2.summary$category);sample.list<-unique(DEgenesGOseq.list2.summary$sample)
+
+###Plot
+library(scales)
+p <- ggplot(DEgenesGOseq.list2.summary ,aes(x=sample,y=term)) + geom_tile(aes(fill=-log10(over_represented_padjust))) + scale_fill_gradient2(low=muted("green"), high=muted("magenta"), na.value = muted("magenta"))+ facet_grid(~FC)+
+  theme(axis.text.x=element_text(size=14,angle=90),
+          axis.text.y=element_text(size=14))
+ggsave(p,filename = "~/GOseq_b2g_input_out/Last_Try_Ferula/DEgenesGOseq.BP.png",width = 12,height = 8)
+ggsave(p,filename = "~/GOseq_b2g_input_out/Last_Try_Ferula/DEgenesGOseq.BP.pdf",width = 12,height = 5)
+
+#visulize
+DEgenesGOseq<-list.files(pattern="GOseq.(FvsR|FvsL|LvsR|FvsS).(up|down)",path="~/GOseq_b2g_input_out/Last_Try_Ferula/MF/")
+#combine
+DEgenesGOseq.list2<-sapply(paste("~/GOseq_b2g_input_out/Last_Try_Ferula/MF/",DEgenesGOseq,sep=""),function(x) mget(load(x)))
+names(DEgenesGOseq.list2)
+DEgenesGOseq.list2.summary<-do.call("rbind",DEgenesGOseq.list2) 
+head(DEgenesGOseq.list2.summary) # make sure those are file names
+rownames(DEgenesGOseq.list2.summary)<-1:nrow(DEgenesGOseq.list2.summary)
+View(DEgenesGOseq.list2.summary)
+GO.list<-unique(DEgenesGOseq.list2.summary$category);sample.list<-unique(DEgenesGOseq.list2.summary$sample)
+
+###Plot
+library(scales)
+q <- ggplot(DEgenesGOseq.list2.summary ,aes(x=sample,y=term)) + geom_tile(aes(fill=-log10(over_represented_padjust))) + scale_fill_gradient2(low=muted("green"), high=muted("magenta"), na.value = muted("magenta"))+ facet_grid(~FC)+
+  theme(axis.text.x=element_text(size=14,angle=90),
+          axis.text.y=element_text(size=14))
+ggsave(q,filename = "~/GOseq_b2g_input_out/Last_Try_Ferula/DEgenesGOseq.MF.png",width = 18,height = 12)
+ggsave(q,filename = "~/GOseq_b2g_input_out/Last_Try_Ferula/DEgenesGOseq.MF.pdf",width = 18,height = 8)
+
+
+#visulize
+DEgenesGOseq<-list.files(pattern="GOseq.(FvsR|FvsL|LvsR|FvsS).(up|down)",path="~/GOseq_b2g_input_out/Last_Try_Ferula/CC/")
+#combine
+DEgenesGOseq.list2<-sapply(paste("~/GOseq_b2g_input_out/Last_Try_Ferula/CC/",DEgenesGOseq,sep=""),function(x) mget(load(x)))
+names(DEgenesGOseq.list2)
+DEgenesGOseq.list2.summary<-do.call("rbind",DEgenesGOseq.list2) 
+head(DEgenesGOseq.list2.summary) # make sure those are file names
+rownames(DEgenesGOseq.list2.summary)<-1:nrow(DEgenesGOseq.list2.summary)
+View(DEgenesGOseq.list2.summary)
+GO.list<-unique(DEgenesGOseq.list2.summary$category);sample.list<-unique(DEgenesGOseq.list2.summary$sample)
+
+###Plot
+library(scales)
+w <- ggplot(DEgenesGOseq.list2.summary ,aes(x=sample,y=term)) + geom_tile(aes(fill=-log10(over_represented_padjust))) + scale_fill_gradient2(low=muted("green"), high=muted("magenta"), na.value = muted("magenta"))+ facet_grid(~FC)+
+  theme(axis.text.x=element_text(size=14,angle=90),
+          axis.text.y=element_text(size=14))
+ggsave(w,filename = "~/GOseq_b2g_input_out/Last_Try_Ferula/DEgenesGOseq.CC.png",width = 10,height = 8)
+ggsave(w,filename = "~/GOseq_b2g_input_out/Last_Try_Ferula/DEgenesGOseq.CC.pdf",width = 10,height =5)
+
+#merge figures
+#library(cowplot)
+x <- plot_grid(p, w,q, labels = c("A", "B", "C"),nrow = 2,align = "h")+ theme_set(theme_cowplot(font_size=20, font_family = "Times") + 
+          theme(text = element_text(colour = "black")))
+ggsave(x,filename = "~/GOseq_b2g_input_out/Last_Try_Ferula/GOseq.DEgenes5.pdf",width = 40,height = 20, dpi = 300)
+
+
+p1 <- qplot(1:10, 1:10) + labs(title = "Linear plot")
+p2 <- qplot(1:10, (1:10)^2) + labs(title = "Quadratic plot")
+theme_set(theme_cowplot(font_size=12, font_family = "Times") + 
+          theme(text = element_text(colour = "blue")))
+plot_grid(p1, p2, labels = "AUTO")
+```
+
+
+
+
+
+
+
+
+
+#GOseq enrichment analysis for 42 modules "hybrid with dis 0.2"
+#run GO function for 43 modules,specify genelist for each of them
+
+```{r}
+#ls *.module_geneID_number_hybrid_MEDissThres0.2.txt > file_list_hybrid_MEDissThres0.2.txt
+#wc file_list_hybrid_MEDissThres0.2.txt #43
+files <- unlist(read.delim("~/WGCNA_input_out/Post_WGCNA_Analysis/file_list_hybrid_MEDissThres0.2.txt", stringsAsFactors = F))
+for (module in files){
+  name <- paste0("~/WGCNA_input_out/Post_WGCNA_Analysis/", module)
+  color <- sub("\\..*","", module)
+  cat("Color is", color, "\n")
+  module.genesID <- read.table(name, stringsAsFactors = F)
+  genelist <- module.genesID$V2
+  over_enriched <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist))
+  if(class(over_enriched) != "try-error"){
+    write.table(over_enriched[,c(1,2,6)],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Last_Try_Ferula/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.2",color), quote = FALSE,col.names = TRUE)
+    write.table(over_enriched[,1:2],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Last_Try_Ferula/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.2.revigo.", color), quote = FALSE,col.names = FALSE)
+  }
+}
+
+#ontology="CC"
+files <- unlist(read.delim("~/WGCNA_input_out/Post_WGCNA_Analysis/file_list_hybrid_MEDissThres0.2.txt", stringsAsFactors = F))
+for (module in files){
+  name <- paste0("~/WGCNA_input_out/Post_WGCNA_Analysis/", module)
+  color <- sub("\\..*","", module)
+  cat("Color is", color, "\n")
+  module.genesID <- read.table(name, stringsAsFactors = F)
+  genelist <- module.genesID$V2
+  over_enriched <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "CC"))
+  if(class(over_enriched) != "try-error"){
+    write.table(over_enriched[,c(1,2,6)],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Last_Try_Ferula/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.2.CC.",color), quote = FALSE,col.names = TRUE)
+    write.table(over_enriched[,1:2],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Last_Try_Ferula/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.2.revigo.CC.", color), quote = FALSE,col.names = FALSE)
+  }
+}
+ 
+#ontology="MF"
+files<- unlist(read.delim("~/WGCNA_input_out/Post_WGCNA_Analysis/file_list_hybrid_MEDissThres0.2.txt", stringsAsFactors = F))
+for (module in files){
+  name <- paste0("~/WGCNA_input_out/Post_WGCNA_Analysis/", module)
+  color <- sub("\\..*","", module)
+  cat("Color is", color, "\n")
+  module.genesID <- read.table(name, stringsAsFactors = F)
+  genelist <- module.genesID$V2
+  over_enriched <- try(Drap_Oases_Plant6.GOseq.Bn.ORA(genelist,ontology = "MF"))
+  if(class(over_enriched) != "try-error"){
+    write.table(over_enriched[,c(1,2,6)],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Last_Try_Ferula/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.2.MF.",color), quote = FALSE,col.names = TRUE)
+    write.table(over_enriched[,1:2],row.names=FALSE,file=paste0("~/GOseq_b2g_input_out/Last_Try_Ferula/Drap_Oases_Plant6.GO.ORA.gt.hybrid.MEDissThres0.2.revigo.MF.", color), quote = FALSE,col.names = FALSE)
+  }
+}
+```

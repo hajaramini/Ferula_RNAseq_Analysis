@@ -524,3 +524,22 @@ dev.off()
 #the exp now is better, we can see the comsistant across tissues
 #the order of the color of the figure is besed on table(mergedColors)
 ```
+#Adjust the p-value for the response to reviewer
+```{r}
+p.adjust(p.values, "fdr")
+```
+
+#draw the plot for correlation For the response to reviewer
+```{r}
+rownames(traitData) <- c("R2", "R3","R6", "S2", "S3", "S6", "F2", "F3", "F6", "L2", "L3", "L6")
+pdf("~/WGCNA_input_out/plot.MEdarkseagreen3&Luteolin.pdf", height = 6, width = 6)
+plot(datME$MEdarkseagreen3,traitData$luteolin, cex=0.5)
+text(datME$MEdarkseagreen3,traitData$luteolin, labels = rownames(traitData),cex=1, font=0.2)
+dev.off()
+pdf("~/WGCNA_input_out/plot.MEdarkseagreen3&sesqui.pdf", height = 6, width = 6)
+plot(datME$MEdarkseagreen3,traitData$sesquiterpene, cex=0.5)
+text(datME$MEdarkseagreen3,traitData$sesquiterpene, labels = rownames(traitData),cex=1, font=0.2)
+dev.off()
+
+```
+

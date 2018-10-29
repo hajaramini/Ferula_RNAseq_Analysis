@@ -1,0 +1,245 @@
+---
+title: "RNASeq_Ferula_Kallisto_DEgenes_Oases_Plant6_Davis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#This is the last version of Differential expression genes
+
+#After mapping reads in to kallisto, we want to find DEG for Drap_Oases_Plant6.fasta, this fasta are from adding transcripts which are not available in drap assembled transcriptome of Drap result in to drap assembly  
+#import data
+
+```{r}
+counts_All <- read.csv("~/Kallisto_input_out/combined_drap_oases_plant6_counts_kallisto.csv", header=T, row.names = "target_id")
+head(counts_All) #for pooling two library of BR3 (they are not replication)
+counts_All$BR3.2 <- counts_All$BR3 + counts_All$BR3.1
+counts_All$BR3 <- NULL
+counts_All$BR3.1 <- NULL
+colnames(counts_All)[19] <- "BR3"
+counts_All$BF3.2 <- counts_All$BF3 + counts_All$BF3.1
+counts_All$BF3 <- NULL
+counts_All$BF3.1 <- NULL
+colnames(counts_All)[18] <- "BF3"
+colnames(counts_All)[1] 
+rownames(counts_All)
+dim(counts_All) # 60134  18 ,60134  is num of transcripts in Reference
+write.csv(counts_All, file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_counts_kallisto.csv")
+counts_Davis <- counts_All[,c("DS6", "DF6","DL6","DR3", "DS3", "DF3" ,"DL3", "DR2", "DS2" ,"DF2" ,"DL2", "DR6")]
+colnames(counts_Davis) <- c("S6", "F6","L6","R3", "S3", "F3" ,"L3", "R2", "S2" ,"F2" ,"L2", "R6")
+dim(counts_Davis) #60134 12
+counts_Davis <- counts_Davis[,c("R2","R3","R6","S2","S3","S6","F2","F3","F6","L2","L3","L6")] #change the order or colnames to put same tissues near each other
+write.csv(counts_Davis, file="~/Kallisto_input_out/Ferula_RNAseq_combined_drap_oases_plant6_Davis_counts_kallisto.csv")
+```
+
+#filter based on read count, assign group, normalize, design matrix
+
+```{r}
+colSums(counts_Davis)
+hist(colSums(counts_Davis,na.rm=TRUE))
+
+#general threshold
+colSums(counts_Davis,na.rm=TRUE) > 1000000 #just false for DF3
+counts_Davis_nolow <- counts_Davis[,colSums(counts_Davis,na.rm=TRUE) > 1000000]
+dim(counts_Davis_nolow) #60134 11 but I prefer to work with all 18 libraries
+#sample description
+samples_Davis <- data.frame(file=colnames(counts_Davis),
+                    trt=factor(sub("(S|F|L|R)(2|3|6)","\\1",colnames(counts_Davis))),
+                    
+                      genotype=factor(sub("(S|F|L|R)(2|3|6)","\\2",colnames(counts_Davis)))) 
+head(samples_Davis) 
+
+#convert NA to zero
+counts_Davis[is.na(counts_Davis)]<-0
+# eliminating genes with low expression levels by retaining genes with > 10 reads in > 3 samples
+counts_Davis_small <-counts_Davis[rowSums(counts_Davis > 10) >= 2,] 
+dim(counts_Davis_small) #27694   12
+dim(counts_Davis) #60134
+write.csv(counts_Davis_small, file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_combined_drap_oases_plant6_Davis_small_counts_kallisto.csv") # use this for downstream analysis
+
+```
+
+```{r}
+samples_Davis_small <- data.frame(file=colnames(counts_Davis_small),                     
+                      trt=factor(sub("(R|S|F|L)(2|3|6)","\\1",colnames(counts_Davis_small))),
+                    
+                      genotype=factor(sub("(R|S|F|L)(2|3|6)","\\2",colnames(counts_Davis_small)))) 
+head(samples_Davis_small)
+save(samples_Davis_small,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAse_combined_drap_oases_plant6_samples_Davis_small_kalliso.Rdata")
+```
+
+#assign group by combining all the experimental factors into one combined factor
+
+```{r}
+genotype<-levels(samples_Davis_small$genotype)
+samples_Davis_small$group <- paste(samples_Davis_small$genotype,samples_Davis_small$trt,sep=".")
+samples_Davis_small$genotype<-as.character(samples_Davis_small$genotype)
+```
+
+#edgeR
+
+```{r}
+library(edgeR)
+dge <- DGEList(counts=counts_Davis_small, group=samples_Davis_small$group) 
+length(colnames(counts_Davis_small)) # 12
+dge<-calcNormFactors(dge, method = "TMM")
+# look at the normalization factors
+nrow(dge$samples) # 12 
+hist(dge$samples[,3]) 
+plot(log10(dge$sample[,"lib.size"]),dge$sample[,"norm.factors"]) 
+#when we want to change the ref from first icon to others
+#samples_Davis_small$genotype <- as.factor(samples_Davis_small$genotype)
+#samples_Davis_small$genotype <- relevel(samples_Davis_small$genotype,ref="3") # plant3 reads 
+samples_Davis_small$trt <- as.factor(samples_Davis_small$trt)
+samples_Davis_small$trt <- relevel(samples_Davis_small$trt,ref="R")
+#design model for trt factors
+design1 <- model.matrix(~trt, data=samples_Davis_small)
+colnames(design1)
+#First the overall dispersion
+dge <- estimateGLMCommonDisp(dge,design1, verbose = T) #Disp =0.86 , BCV =0.92
+dge <- estimateGLMTrendedDisp(dge,design1)
+dge <- estimateGLMTagwiseDisp(dge,design1)
+save(dge,file="~/Kallisto_input_out/Kallisto_drap_oases_plant6_Davis.dge.Rdata")
+plotBCV(dge)
+pdf("~/Ferula_RNAseq_Analysis/Kallisto_out/MDS.plot.pdf",height=6,width=6)
+mds.dge <- plotMDS(dge, method = "bcv",labels = dge$samples$group)
+dev.off()
+```
+
+
+#To find genes that are differentially expressed in trt S, F & L vs R 
+
+```{r}
+dge.fit <- glmFit(dge, design1)
+dge.lrt.trt <- glmLRT(dge.fit,coef = c("trtF","trtL", "trtS"))
+#the top 10 most differentially expressed genes
+topTags(dge.lrt.trt)
+summary(decideTestsDGE(dge.lrt.trt,p=0.05))
+#Extract genes with a FDR < 0.01 (could also use 0.05)
+DEgenes2 <- topTags(dge.lrt.trt,n = Inf)$table[topTags(dge.lrt.trt,n = Inf)$table$FDR<0.05,]
+write.csv(DEgenes2,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes2.csv")
+save(DEgenes2,file="~/Kallisto_input_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes2.RData")
+dim(DEgenes2) #3534   7
+colnames(DEgenes2)
+head(DEgenes2)
+write.table(DEgenes2, "~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_DEgenes2ID.txt", col.names = T, row.names = T)
+
+#To do pairwise comparison(I did before but this one for checking again and use them for GO seq analysis)
+#Flower vs Root
+#design1 <- model.matrix(~trt, data=samples_Davis_small)
+lrt.trt.FvsR <- glmLRT(dge.fit, coef = "trtF")
+topTags(lrt.trt.FvsR)
+summary(dge.lrt.trt.FvsR <- decideTestsDGE(lrt.trt.FvsR, p=0.05))
+DEgene.FvsR<- topTags(lrt.trt.FvsR,n = Inf)$table[topTags(lrt.trt.FvsR,n = Inf)$table$FDR<0.05,]
+write.csv(DEgene.FvsR,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsR.csv")
+#   trtF
+#-1   94
+#0  27116
+#1  326
+DEgene.FvsR %>% dim() #420  5
+#Stem vs Root
+lrt.trt.SvsR <- glmLRT(dge.fit, coef = "trtS")
+topTags(lrt.trt.SvsR)
+summary(dge.lrt.trt.SvsR <- decideTestsDGE(lrt.trt.SvsR, p=0.05))
+DEgene.SvsR<- topTags(lrt.trt.SvsR,n = Inf)$table[topTags(lrt.trt.SvsR,n = Inf)$table$FDR<0.05,]
+write.csv(DEgene.SvsR,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.SvsR.csv")
+#   trtS
+#-1   3
+#0  27689
+#1  2
+DEgene.SvsR %>% dim() #1  5
+#Leaf vs Root
+lrt.trt.LvsR <- glmLRT(dge.fit, coef = "trtL")
+topTags(lrt.trt.LvsR)
+summary(dge.lrt.trt.LvsR <- decideTestsDGE(lrt.trt.LvsR, p=0.05))
+DEgene.LvsR<- topTags(lrt.trt.LvsR,n = Inf)$table[topTags(lrt.trt.LvsR,n = Inf)$table$FDR<0.05,]
+write.csv(DEgene.LvsR,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.LvsR.csv")
+#   trtS
+#-1   2794
+#0  23915
+#1  985
+DEgene.LvsR %>% dim() #3210  5
+
+#Flower vs Stem
+#change the ref from root to stem
+samples_Davis_small$trt <- relevel(samples_Davis_small$trt,ref="S")
+design1 <- model.matrix(~trt, data=samples_Davis_small)
+#samples_Davis_small$genotype <- relevel(samples_Davis_small$genotype,ref="3")
+dge.fit <- glmFit(dge, design1)
+lrt.trt.FvsS <- glmLRT(dge.fit, coef = "trtF")
+topTags(lrt.trt.FvsS)
+summary(dge.lrt.trt.FvsS <- decideTestsDGE(lrt.trt.FvsS, p=0.05))
+DEgene.FvsS<- topTags(lrt.trt.FvsS,n = Inf)$table[topTags(lrt.trt.FvsS,n = Inf)$table$FDR<0.05,]
+write.csv(DEgene.FvsS,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsS.csv")
+#   trtF
+#-1   80
+#0  27201
+#1  413
+DEgene.FvsS %>% dim() #320  5
+
+#LvsS
+lrt.trt.LvsS <- glmLRT(dge.fit, coef = "trtL")
+topTags(lrt.trt.LvsS)
+summary(dge.lrt.trt.LvsS <- decideTestsDGE(lrt.trt.LvsS, p=0.05))
+DEgene.LvsS<- topTags(lrt.trt.LvsS,n = Inf)$table[topTags(lrt.trt.LvsS,n = Inf)$table$FDR<0.05,]
+#   trtL
+#-1   5
+#0  27683
+#1  6
+DEgene.LvsS %>% dim() #3210  5
+
+# F vs L
+#change the ref from root to stem
+samples_Davis_small$trt <- relevel(samples_Davis_small$trt,ref="L")
+design1 <- model.matrix(~trt, data=samples_Davis_small)
+#samples_Davis_small$genotype <- relevel(samples_Davis_small$genotype,ref="3")
+dge.fit <- glmFit(dge, design1)
+lrt.trt.FvsL <- glmLRT(dge.fit, coef = "trtF")
+topTags(lrt.trt.FvsL)
+summary(dge.lrt.trt.FvsL <- decideTestsDGE(lrt.trt.FvsL, p=0.05))
+DEgene.FvsL<- topTags(lrt.trt.FvsL,n = Inf)$table[topTags(lrt.trt.FvsL,n = Inf)$table$FDR<0.05,]
+write.csv(DEgene.FvsL,file="~/Ferula_RNAseq_Analysis/Kallisto_out/Ferula_RNAseq_drap_oases_plant6_Davis_DEgenes.FvsL.csv")
+#   trtF
+#-1   65
+#0  26987
+#1  642
+DEgene.FvsL %>% dim() #707  5
+```
+
+
+##To find genes that are differentially expressed in trt S, F & L vs R seperately
+
+```{r}
+dge.lrt.trtF <- glmLRT(dge.fit,coef = c("trtF"))
+topTags(dge.lrt.trtF)
+summary(decideTestsDGE(dge.lrt.trtF, p=0.05))
+dge.lrt.trtL <- glmLRT(dge.fit,coef = c("trtL"))
+topTags(dge.lrt.trtL)
+summary(decideTestsDGE(dge.lrt.trtL, p=0.05))
+dge.lrt.trtS <- glmLRT(dge.fit,coef = c("trtS"))
+topTags(dge.lrt.trtS)
+summary(decideTestsDGE(dge.lrt.trtS, p=0.05))
+```
+
+```{r}
+#For finding the expression of each genes for each tissues
+a <- decideTestsDGE(dge.lrt.trtF, p=0.05)
+#a[1:3]
+#a[1:3,]
+#a[1:3,1]
+dim(a) #27694   1
+b <- rownames(dge.lrt.trtF$coefficients)
+c <- data.frame(b,a)
+dge.lrt.trtL <- glmLRT(dge.fit,coef = c("trtL"))
+d <- decideTestsDGE(dge.lrt.trtL, p=0.05)
+e <- decideTestsDGE(dge.lrt.trtS, p=0.05)
+c <- data.frame(b,a,d,e)
+all_trts <- c
+colnames(all_trts) <- c("Gene","Flower","Leaf","Stem")
+write.table(all_trts, "/Network/Servers/avalanche.plb.ucdavis.edu/Volumes/Mammoth/Users/hajaramini/Ferula_RNAseq_Analysis/Kallisto_out/all_trts_kallisto_drap_oases_plant6_Davis_DEgenes2.txt", col.names = T, row.names = T)
+
+#For checking the genes without three zero run this command then we want to see DEGs are located in which modules.
+#grep -v "0 0 0" all_trts_kallisto_drap_oases_plant6_Davis_DEgenes2.txt > all_trts_kallisto_drap_oases_plant6_Davis_DEgenes2_NoThreeZero.txt 
+```
